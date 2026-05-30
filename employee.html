@@ -124,12 +124,14 @@ body {
 }
 .card + .card { margin-top: 16px; }
 
-/* ── CHECKIN CARD ── */
+/* ── CHECKIN HERO ── */
 .checkin-hero {
   background: var(--bg2); border: 1px solid var(--border);
-  border-radius: 16px; padding: 28px;
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 24px; margin-bottom: 16px;
+  border-radius: 16px; padding: 24px 28px;
+  margin-bottom: 16px;
+}
+.checkin-top {
+  display: flex; align-items: center; justify-content: space-between; gap: 24px;
 }
 .checkin-status { flex: 1; }
 .checkin-label {
@@ -140,35 +142,74 @@ body {
   font-size: 22px; font-weight: 600; margin-bottom: 4px;
 }
 .checkin-state.working { color: var(--green); }
+.checkin-state.done { color: var(--text2); }
 .checkin-state.not-in { color: var(--text2); }
 .checkin-meta { font-size: 12px; color: var(--text3); font-family: 'DM Mono', monospace; }
-.checkin-actions { display: flex; gap: 8px; flex-shrink: 0; }
 
-/* ── TIME LOG FORM ── */
-.timelog-form {
-  background: var(--bg3); border: 1px solid var(--border);
-  border-radius: 12px; padding: 20px; margin-bottom: 16px;
+/* ── INLINE LOG FORM ── */
+.log-form-wrap {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.35s ease, opacity 0.25s ease, margin-top 0.25s ease;
+  opacity: 0;
+  margin-top: 0;
 }
-.timelog-title {
-  font-size: 13px; font-weight: 600; margin-bottom: 16px;
-  color: var(--text2);
+.log-form-wrap.open {
+  max-height: 300px;
+  opacity: 1;
+  margin-top: 20px;
 }
-.timelog-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
-  margin-bottom: 12px;
+.log-form-inner {
+  border-top: 1px solid var(--border);
+  padding-top: 20px;
 }
-.time-input-group label {
-  display: block; font-size: 11px; font-weight: 600;
-  color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em;
-  margin-bottom: 6px;
+.log-form-grid {
+  display: grid;
+  grid-template-columns: 160px 160px 1fr auto;
+  gap: 12px;
+  align-items: end;
 }
-.time-input-group input {
-  width: 100%; background: var(--bg2); border: 1px solid var(--border);
-  border-radius: 8px; color: var(--text); font-family: 'DM Mono', monospace;
-  font-size: 14px; padding: 9px 12px; outline: none;
+.log-field label {
+  display: block;
+  font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--text3); margin-bottom: 6px;
+}
+.log-field input,
+.log-field textarea {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  font-size: 14px;
+  padding: 9px 12px;
+  outline: none;
   transition: border-color 0.15s;
 }
-.time-input-group input:focus { border-color: var(--accent); }
+.log-field input:focus,
+.log-field textarea:focus { border-color: var(--accent); }
+.log-field textarea {
+  font-family: 'Sora', sans-serif;
+  font-size: 13px;
+  resize: none;
+  height: 40px;
+  line-height: 1.4;
+}
+.log-submit-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 18px; border-radius: 8px;
+  font-size: 13px; font-weight: 600;
+  font-family: 'Sora', sans-serif;
+  cursor: pointer; border: none;
+  background: var(--accent); color: #fff;
+  transition: background 0.15s;
+  white-space: nowrap;
+  height: 40px;
+}
+.log-submit-btn:hover { background: var(--accent2); }
+.log-submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* ── STATS GRID ── */
 .stats-grid {
@@ -280,9 +321,6 @@ tr:hover td { background: var(--bg3); }
 .task-actions { display: flex; gap: 6px; flex-shrink: 0; }
 
 /* ── SHIFT GRID ── */
-.shift-week-nav {
-  display: flex; align-items: center; gap: 12px; margin-bottom: 16px;
-}
 .shift-days {
   display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px;
   margin-bottom: 16px;
@@ -342,6 +380,23 @@ tr:hover td { background: var(--bg3); }
 .toast.success { border-color: rgba(62,207,142,0.3); }
 .toast.error { border-color: rgba(240,82,82,0.3); }
 
+/* ── DATE FILTER ── */
+.date-filter {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.date-filter input {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); font-family: 'Sora', sans-serif;
+  font-size: 13px; padding: 7px 10px; outline: none;
+  transition: border-color 0.15s; width: 145px;
+}
+.date-filter input:focus { border-color: var(--accent); }
+
+.hours-highlight {
+  font-family: 'DM Mono', monospace;
+  font-size: 13px; font-weight: 500; color: var(--accent);
+}
+
 /* ── MODAL ── */
 .modal-overlay {
   position: fixed; inset: 0;
@@ -359,24 +414,6 @@ tr:hover td { background: var(--bg3); }
 .modal-overlay.open .modal { transform: translateY(0); }
 .modal-title { font-size: 15px; font-weight: 600; margin-bottom: 18px; }
 .modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; }
-
-/* ── DATE FILTER ── */
-.date-filter {
-  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-}
-.date-filter input {
-  background: var(--bg3); border: 1px solid var(--border);
-  border-radius: 8px; color: var(--text); font-family: 'Sora', sans-serif;
-  font-size: 13px; padding: 7px 10px; outline: none;
-  transition: border-color 0.15s; width: 145px;
-}
-.date-filter input:focus { border-color: var(--accent); }
-
-/* ── HOURS HIGHLIGHT ── */
-.hours-highlight {
-  font-family: 'DM Mono', monospace;
-  font-size: 13px; font-weight: 500; color: var(--accent);
-}
 </style>
 </head>
 <body>
@@ -437,30 +474,52 @@ tr:hover td { background: var(--bg3); }
     </button>
   </div>
 
-  <!-- ══════════════════════════════════════════════════
-       PAGE: CHẤM CÔNG
-  ══════════════════════════════════════════════════ -->
+  <!-- PAGE: CHẤM CÔNG -->
   <div class="page active" id="page-checkin">
     <div class="content">
 
-      <!-- Status hero -->
+      <!-- Hero card -->
       <div class="checkin-hero">
-        <div class="checkin-status">
-          <div class="checkin-label">Trạng thái hôm nay</div>
-          <div class="checkin-state not-in" id="checkin-state-text">Chưa chấm công</div>
-          <div class="checkin-meta" id="checkin-meta-text">—</div>
+        <div class="checkin-top">
+          <div class="checkin-status">
+            <div class="checkin-label">Trạng thái hôm nay</div>
+            <div class="checkin-state not-in" id="checkin-state-text">Chưa chấm công</div>
+            <div class="checkin-meta" id="checkin-meta-text">—</div>
+          </div>
+          <div>
+            <button class="btn btn-primary" id="btn-cham-cong" onclick="toggleLogForm()">
+              + Chấm công hôm nay
+            </button>
+          </div>
         </div>
-        <div class="checkin-actions">
-          <button class="btn btn-success" id="btn-checkin" onclick="openModal('modal-checkin')">
-            ▶ Check-in
-          </button>
-          <button class="btn btn-ghost" id="btn-checkout" onclick="openModal('modal-checkout')" style="display:none">
-            ■ Check-out
-          </button>
+
+        <!-- Inline form — drop xuống khi bấm nút -->
+        <div class="log-form-wrap" id="log-form-wrap">
+          <div class="log-form-inner">
+            <div class="log-form-grid">
+              <div class="log-field">
+                <label>Giờ vào</label>
+                <input type="time" id="log-checkin">
+              </div>
+              <div class="log-field">
+                <label>Giờ ra</label>
+                <input type="time" id="log-checkout">
+              </div>
+              <div class="log-field">
+                <label>Mô tả công việc</label>
+                <textarea id="log-desc" placeholder="Hôm nay bạn đã làm gì?..."></textarea>
+              </div>
+              <div>
+                <button class="log-submit-btn" id="log-submit-btn" onclick="doLogWork()">
+                  ✓ Lưu
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- Stats tháng này -->
+      <!-- Stats -->
       <div class="stats-grid">
         <div class="stat-card green">
           <div class="stat-label">Tổng giờ làm</div>
@@ -479,7 +538,7 @@ tr:hover td { background: var(--bg3); }
         </div>
       </div>
 
-      <!-- History table -->
+      <!-- History -->
       <div class="card">
         <div class="section-header">
           <div class="section-title">Lịch sử chấm công</div>
@@ -499,7 +558,7 @@ tr:hover td { background: var(--bg3); }
                 <th>Check-out</th>
                 <th>Giờ làm</th>
                 <th>Trạng thái</th>
-                <th>Ghi chú</th>
+                <th>Mô tả</th>
               </tr>
             </thead>
             <tbody id="att-table-body">
@@ -511,9 +570,7 @@ tr:hover td { background: var(--bg3); }
     </div>
   </div>
 
-  <!-- ══════════════════════════════════════════════════
-       PAGE: CÔNG VIỆC
-  ══════════════════════════════════════════════════ -->
+  <!-- PAGE: CÔNG VIỆC -->
   <div class="page" id="page-tasks">
     <div class="content">
       <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
@@ -528,9 +585,7 @@ tr:hover td { background: var(--bg3); }
     </div>
   </div>
 
-  <!-- ══════════════════════════════════════════════════
-       PAGE: ĐĂNG KÝ CA
-  ══════════════════════════════════════════════════ -->
+  <!-- PAGE: ĐĂNG KÝ CA -->
   <div class="page" id="page-shifts">
     <div class="content">
       <div class="card">
@@ -542,21 +597,13 @@ tr:hover td { background: var(--bg3); }
             <button class="btn btn-ghost btn-sm" onclick="nextWeek()">›</button>
           </div>
         </div>
-
-        <!-- Status badge nếu đã duyệt -->
-        <div id="shift-status-bar" style="display:none;margin-bottom:14px">
-          <span id="shift-status-badge"></span>
-        </div>
-
+        <div id="shift-status-bar" style="display:none;margin-bottom:14px"></div>
         <div class="shift-days" id="shift-days-grid"></div>
-
         <div style="display:flex;justify-content:flex-end;gap:8px">
           <button class="btn btn-ghost" onclick="clearShift()">Xóa chọn</button>
           <button class="btn btn-primary" onclick="submitShift()" id="btn-submit-shift">Đăng ký ca</button>
         </div>
       </div>
-
-      <!-- Lịch sử đăng ký ca -->
       <div class="card">
         <div class="section-title" style="margin-bottom:14px">Lịch sử đăng ký</div>
         <div class="table-wrap">
@@ -577,18 +624,12 @@ tr:hover td { background: var(--bg3); }
     </div>
   </div>
 
-  <!-- ══════════════════════════════════════════════════
-       PAGE: STORE CỦA TÔI
-  ══════════════════════════════════════════════════ -->
+  <!-- PAGE: STORE CỦA TÔI -->
   <div class="page" id="page-store">
     <div class="content">
-
-      <!-- Store info -->
       <div id="store-info-card">
         <div style="text-align:center;padding:32px"><div class="spinner"></div></div>
       </div>
-
-      <!-- Tasks của store này -->
       <div class="card" id="store-tasks-card" style="margin-top:16px;display:none">
         <div class="section-header">
           <div class="section-title">Task liên quan đến store</div>
@@ -601,75 +642,25 @@ tr:hover td { background: var(--bg3); }
         </div>
         <div id="store-task-list"></div>
       </div>
-
     </div>
   </div>
 
 </div><!-- /app -->
 
-<!-- ══ MODALS ══ -->
-
-<!-- Check-in modal -->
-<div class="modal-overlay" id="modal-checkin">
-  <div class="modal">
-    <div class="modal-title">◷ Check-in hôm nay</div>
-    <div class="form-group">
-      <label class="form-label">Giờ vào *</label>
-      <input class="form-input" type="time" id="ci-time" style="font-family:'DM Mono',monospace">
-    </div>
-    <div class="form-group">
-      <label class="form-label">Kế hoạch công việc hôm nay *</label>
-      <textarea class="form-textarea" id="ci-work" placeholder="Hôm nay bạn sẽ làm gì? VD: Upload 30 listing store A, xử lý đơn hàng tồn..." style="min-height:100px"></textarea>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Ghi chú thêm</label>
-      <textarea class="form-textarea" id="ci-note" placeholder="Ghi chú khác (nếu có)..."></textarea>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal('modal-checkin')">Hủy</button>
-      <button class="btn btn-success" onclick="doCheckIn()">▶ Xác nhận Check-in</button>
-    </div>
-  </div>
-</div>
-
-<!-- Check-out modal -->
-<div class="modal-overlay" id="modal-checkout">
-  <div class="modal">
-    <div class="modal-title">■ Check-out hôm nay</div>
-    <div class="form-group">
-      <label class="form-label">Giờ ra *</label>
-      <input class="form-input" type="time" id="co-time" style="font-family:'DM Mono',monospace">
-    </div>
-    <div class="form-group">
-      <label class="form-label">Tổng kết công việc hôm nay *</label>
-      <textarea class="form-textarea" id="co-work" placeholder="Hôm nay bạn đã làm gì? Kết quả ra sao? VD: Đã upload 28/30 listing, còn 2 listing lỗi ảnh..." style="min-height:100px"></textarea>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Ghi chú thêm</label>
-      <textarea class="form-textarea" id="co-note" placeholder="Vấn đề phát sinh, cần hỗ trợ... (nếu có)"></textarea>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal('modal-checkout')">Hủy</button>
-      <button class="btn btn-danger" onclick="doCheckOut()">■ Xác nhận Check-out</button>
-    </div>
-  </div>
-</div>
-
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
 <script>
-// ── CONFIG ──
-const API_URL = 'https://script.google.com/macros/s/AKfycbwYWbnfoOLKr23049hmtf2mPyjZINzxkwyU25koD8G9OoplpQhoqaI2SjuJrRiQm_Hu/exec'; // ← thay URL của bạn
+const API_URL = 'https://script.google.com/macros/s/AKfycbwYWbnfoOLKr23049hmtf2mPyjZINzxkwyU25koD8G9OoplpQhoqaI2SjuJrRiQm_Hu/exec';
 
-// ── STATE ──
 let token = localStorage.getItem('pod_token_emp');
 let currentUser = JSON.parse(localStorage.getItem('pod_user_emp') || 'null');
 let allTasksFull = [];
 let currentTaskFilter = 'all';
-let currentWeekOffset = 0; // 0 = tuần này
+let currentWeekOffset = 0;
 let currentShiftData = null;
-let allShifts = [];
+let storeTasksFull = [];
+let logFormOpen = false;
 
 // ── INIT ──
 document.addEventListener('DOMContentLoaded', () => {
@@ -677,7 +668,6 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('today-date').textContent =
     d.toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-  // Set mặc định filter tháng này
   const today = d.toISOString().split('T')[0];
   const firstOfMonth = new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0];
   document.getElementById('att-from').value = firstOfMonth;
@@ -771,13 +761,6 @@ function showPage(page) {
   document.getElementById('nav-' + page).classList.add('active');
 }
 
-// ── MODAL ──
-function openModal(id) { document.getElementById(id).classList.add('open'); }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-document.addEventListener('click', e => {
-  if (e.target.classList.contains('modal-overlay')) e.target.classList.remove('open');
-});
-
 // ── TOAST ──
 function showToast(msg, type = 'success') {
   const t = document.getElementById('toast');
@@ -822,110 +805,110 @@ function priorityBadge(p) {
   return `<span class="badge badge-${cls}">${label}</span>`;
 }
 
+// ── LOG FORM (TOGGLE) ──
+function toggleLogForm() {
+  logFormOpen = !logFormOpen;
+  const wrap = document.getElementById('log-form-wrap');
+  const btn  = document.getElementById('btn-cham-cong');
+
+  if (logFormOpen) {
+    wrap.classList.add('open');
+    btn.textContent = '✕ Đóng';
+    // Pre-fill giờ hiện tại
+    const now = new Date().toTimeString().slice(0, 5);
+    document.getElementById('log-checkin').value = now;
+    document.getElementById('log-checkout').value = now;
+    document.getElementById('log-desc').focus();
+  } else {
+    wrap.classList.remove('open');
+    btn.textContent = '+ Chấm công hôm nay';
+  }
+}
+
+// ── DO LOG WORK ──
+async function doLogWork() {
+  const ciVal = document.getElementById('log-checkin').value;
+  const coVal = document.getElementById('log-checkout').value;
+  const desc  = document.getElementById('log-desc').value.trim();
+
+  if (!ciVal || !coVal) return showToast('Điền đủ giờ vào và giờ ra', 'error');
+  if (!desc)            return showToast('Điền mô tả công việc hôm nay', 'error');
+  if (ciVal >= coVal)   return showToast('Giờ ra phải sau giờ vào', 'error');
+
+  const btn = document.getElementById('log-submit-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div>';
+
+  const todayBase = new Date();
+  const [ciH, ciM] = ciVal.split(':').map(Number);
+  const [coH, coM] = coVal.split(':').map(Number);
+  const checkInDate  = new Date(todayBase); checkInDate.setHours(ciH, ciM, 0, 0);
+  const checkOutDate = new Date(todayBase); checkOutDate.setHours(coH, coM, 0, 0);
+
+  const note = `[Mô tả] ${desc}`;
+
+  // Bước 1: checkIn
+  const resIn = await apiPost({ action: 'checkIn', checkInTime: checkInDate.toISOString(), note });
+
+  // Nếu lỗi mà không phải "đã check-in rồi" thì dừng
+  if (!resIn.success && !(resIn.error || '').toLowerCase().includes('already')) {
+    btn.disabled = false; btn.innerHTML = '✓ Lưu';
+    return showToast(resIn.error || 'Lỗi check-in', 'error');
+  }
+
+  // Bước 2: checkOut
+  const resOut = await apiPost({ action: 'checkOut', checkOutTime: checkOutDate.toISOString(), note });
+
+  btn.disabled = false; btn.innerHTML = '✓ Lưu';
+
+  if (resOut.success) {
+    showToast('Đã lưu chấm công!');
+    document.getElementById('log-desc').value = '';
+    // Đóng form
+    logFormOpen = true; // trick để toggle đóng
+    toggleLogForm();
+    loadTodayStatus();
+    loadAttendance();
+  } else {
+    showToast(resOut.error || 'Lỗi check-out', 'error');
+  }
+}
+
 // ── TODAY STATUS ──
 async function loadTodayStatus() {
   try {
     const res = await api({ action: 'getTodayAttendance' });
     if (!res.success) return;
-    const records = res.data;
-    const today = records.find(r => r.userId === currentUser.id);
+    const today = res.data.find(r => String(r.userId) === String(currentUser.id));
 
     const stateEl = document.getElementById('checkin-state-text');
-    const metaEl = document.getElementById('checkin-meta-text');
-    const btnIn = document.getElementById('btn-checkin');
-    const btnOut = document.getElementById('btn-checkout');
-
-    // Pre-fill checkout time modal
-    const nowStr = new Date().toTimeString().slice(0, 5);
-    document.getElementById('co-time').value = nowStr;
-    document.getElementById('ci-time').value = nowStr;
+    const metaEl  = document.getElementById('checkin-meta-text');
+    const btn     = document.getElementById('btn-cham-cong');
 
     if (!today) {
       stateEl.textContent = 'Chưa chấm công';
       stateEl.className = 'checkin-state not-in';
       metaEl.textContent = '—';
-      btnIn.style.display = 'inline-flex';
-      btnOut.style.display = 'none';
+      if (!logFormOpen) btn.textContent = '+ Chấm công hôm nay';
+    } else if (today.status === 'done') {
+      const hrs = calcHours(today.checkIn, today.checkOut);
+      stateEl.textContent = 'Đã chấm công';
+      stateEl.className = 'checkin-state done';
+      metaEl.textContent = `${fmtTime(today.checkIn)} → ${fmtTime(today.checkOut)}${hrs ? '  (' + hrs.toFixed(1) + 'h)' : ''}`;
+      if (!logFormOpen) btn.textContent = '✎ Cập nhật lại';
     } else if (today.status === 'working') {
       stateEl.textContent = 'Đang làm việc';
       stateEl.className = 'checkin-state working';
-      metaEl.textContent = 'Check-in lúc ' + fmtTime(today.checkIn);
-      btnIn.style.display = 'none';
-      btnOut.style.display = 'inline-flex';
-    } else {
-      stateEl.textContent = 'Đã hoàn thành';
-      stateEl.className = 'checkin-state';
-      stateEl.style.color = 'var(--text2)';
-      const hrs = calcHours(today.checkIn, today.checkOut);
-      metaEl.textContent = `${fmtTime(today.checkIn)} → ${fmtTime(today.checkOut)}${hrs ? '  (' + hrs.toFixed(1) + 'h)' : ''}`;
-      btnIn.style.display = 'none';
-      btnOut.style.display = 'none';
+      metaEl.textContent = `Check-in lúc ${fmtTime(today.checkIn)}`;
+      if (!logFormOpen) btn.textContent = '✎ Cập nhật lại';
     }
   } catch(e) {}
-}
-
-// ── CHECK IN ──
-async function doCheckIn() {
-  const timeVal = document.getElementById('ci-time').value;
-  const work = document.getElementById('ci-work').value.trim();
-  const note = document.getElementById('ci-note').value.trim();
-  if (!timeVal) return showToast('Chọn giờ check-in', 'error');
-  if (!work) return showToast('Điền kế hoạch công việc hôm nay', 'error');
-
-  const today = new Date();
-  const [h, m] = timeVal.split(':');
-  today.setHours(parseInt(h), parseInt(m), 0, 0);
-  const checkInISO = today.toISOString();
-
-  // Gộp kế hoạch + ghi chú vào note
-  const fullNote = note ? `[Kế hoạch] ${work}\n[Ghi chú] ${note}` : `[Kế hoạch] ${work}`;
-
-  const res = await apiPost({ action: 'checkIn', checkInTime: checkInISO, note: fullNote });
-  if (res.success) {
-    showToast('Check-in thành công!');
-    closeModal('modal-checkin');
-    document.getElementById('ci-work').value = '';
-    document.getElementById('ci-note').value = '';
-    loadTodayStatus();
-    loadAttendance();
-  } else {
-    showToast(res.error || 'Lỗi', 'error');
-  }
-}
-
-// ── CHECK OUT ──
-async function doCheckOut() {
-  const timeVal = document.getElementById('co-time').value;
-  const work = document.getElementById('co-work').value.trim();
-  const note = document.getElementById('co-note').value.trim();
-  if (!timeVal) return showToast('Chọn giờ check-out', 'error');
-  if (!work) return showToast('Điền tổng kết công việc hôm nay', 'error');
-
-  const today = new Date();
-  const [h, m] = timeVal.split(':');
-  today.setHours(parseInt(h), parseInt(m), 0, 0);
-  const checkOutISO = today.toISOString();
-
-  // Gộp tổng kết + ghi chú vào note
-  const fullNote = note ? `[Tổng kết] ${work}\n[Ghi chú] ${note}` : `[Tổng kết] ${work}`;
-
-  const res = await apiPost({ action: 'checkOut', checkOutTime: checkOutISO, note: fullNote });
-  if (res.success) {
-    showToast('Check-out thành công!');
-    closeModal('modal-checkout');
-    document.getElementById('co-work').value = '';
-    document.getElementById('co-note').value = '';
-    loadTodayStatus();
-    loadAttendance();
-  } else {
-    showToast(res.error || 'Lỗi', 'error');
-  }
 }
 
 // ── ATTENDANCE LIST ──
 async function loadAttendance() {
   const startDate = document.getElementById('att-from').value;
-  const endDate = document.getElementById('att-to').value;
+  const endDate   = document.getElementById('att-to').value;
   const tb = document.getElementById('att-table-body');
   tb.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px"><div class="spinner"></div></td></tr>';
 
@@ -935,16 +918,14 @@ async function loadAttendance() {
 
     const list = res.data.sort((a, b) => b.date.localeCompare(a.date));
 
-    // Compute stats
-    let totalHours = 0;
-    let workDays = 0;
+    let totalHours = 0, workDays = 0;
     list.forEach(r => {
       const h = calcHours(r.checkIn, r.checkOut);
       if (h) { totalHours += h; workDays++; }
     });
     document.getElementById('stat-total-hours').textContent = totalHours.toFixed(1) + 'h';
-    document.getElementById('stat-total-days').textContent = workDays + ' ngày';
-    document.getElementById('stat-avg-hours').textContent = workDays > 0 ? (totalHours / workDays).toFixed(1) + 'h' : '—';
+    document.getElementById('stat-total-days').textContent  = workDays + ' ngày';
+    document.getElementById('stat-avg-hours').textContent   = workDays > 0 ? (totalHours / workDays).toFixed(1) + 'h' : '—';
 
     if (!list.length) {
       tb.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="icon">◷</div><p>Không có dữ liệu trong khoảng thời gian này</p></div></td></tr>';
@@ -953,13 +934,15 @@ async function loadAttendance() {
 
     tb.innerHTML = list.map(r => {
       const hrs = calcHours(r.checkIn, r.checkOut);
+      // Parse mô tả từ note
+      const noteText = (r.note || '').replace('[Mô tả] ', '').replace('[Kế hoạch] ', '').replace('[Tổng kết] ', '');
       return `<tr>
         <td style="font-family:'DM Mono',monospace;font-size:12px">${r.date}</td>
         <td style="font-family:'DM Mono',monospace;color:var(--green)">${fmtTime(r.checkIn)}</td>
         <td style="font-family:'DM Mono',monospace;color:var(--text2)">${fmtTime(r.checkOut)}</td>
         <td class="hours-highlight">${hrs ? hrs.toFixed(1) + 'h' : '—'}</td>
         <td>${statusBadge(r.status === 'done' ? 'done' : r.status)}</td>
-        <td style="font-size:12px;color:var(--text3)">${r.note || '—'}</td>
+        <td style="font-size:12px;color:var(--text3);max-width:200px">${noteText || '—'}</td>
       </tr>`;
     }).join('');
   } catch(e) {
@@ -971,10 +954,7 @@ async function loadAttendance() {
 async function loadTasks() {
   try {
     const res = await api({ action: 'getTasks' });
-    if (res.success) {
-      allTasksFull = res.data;
-      filterTasks(currentTaskFilter);
-    }
+    if (res.success) { allTasksFull = res.data; filterTasks(currentTaskFilter); }
   } catch(e) {}
 }
 
@@ -1010,7 +990,7 @@ function renderTasks(list) {
             <select class="form-select" style="padding:5px 8px;font-size:12px;width:130px" onchange="updateTaskStatus('${t.id}',this.value)">
               <option value="pending" ${t.status==='pending'?'selected':''}>Chờ xử lý</option>
               <option value="in_progress" ${t.status==='in_progress'?'selected':''}>Đang làm</option>
-              <option value="done" ${t.status==='done'?'selected':''}>Hoàn thành</option>
+              <option value="done">Hoàn thành</option>
             </select>
           ` : ''}
         </div>
@@ -1027,19 +1007,18 @@ async function updateTaskStatus(taskId, status) {
 
 // ── SHIFT ──
 const DAY_NAMES = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
-const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+const DAY_KEYS  = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 
 function getWeekStart(offset) {
   const d = new Date();
-  const day = d.getDay(); // 0=Sun
-  const diff = (day === 0 ? -6 : 1 - day); // Mon as start
+  const day = d.getDay();
+  const diff = (day === 0 ? -6 : 1 - day);
   d.setDate(d.getDate() + diff + offset * 7);
   d.setHours(0,0,0,0);
   return d;
 }
 
 function getWeekStr(d) {
-  // ISO week number
   const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
   const dayNum = date.getUTCDay() || 7;
   date.setUTCDate(date.getUTCDate() + 4 - dayNum);
@@ -1050,56 +1029,38 @@ function getWeekStr(d) {
 
 function loadShiftPage() {
   const weekStart = getWeekStart(currentWeekOffset);
-  const weekStr = getWeekStr(weekStart);
-  const weekEnd = new Date(weekStart); weekEnd.setDate(weekEnd.getDate() + 6);
+  const weekStr   = getWeekStr(weekStart);
+  const weekEnd   = new Date(weekStart); weekEnd.setDate(weekEnd.getDate() + 6);
 
   document.getElementById('week-label').textContent =
     weekStart.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }) + ' – ' +
     weekEnd.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-  // Load shift for this week if exists
   api({ action: 'getShifts', week: weekStr }).then(res => {
-    if (res.success && res.data.length > 0) {
-      currentShiftData = res.data[0];
-    } else {
-      currentShiftData = null;
-    }
+    currentShiftData = (res.success && res.data.length > 0) ? res.data[0] : null;
     renderShiftGrid(weekStart, currentShiftData);
 
-    // Show status
     const bar = document.getElementById('shift-status-bar');
     if (currentShiftData && currentShiftData.status) {
       bar.style.display = 'block';
-      document.getElementById('shift-status-badge').outerHTML =
-        `<span id="shift-status-badge">${statusBadge(currentShiftData.status)}</span>`;
-      document.getElementById('shift-status-bar').innerHTML =
-        `<span style="font-size:12px;color:var(--text2)">Trạng thái đăng ký: </span>` +
-        statusBadge(currentShiftData.status);
+      bar.innerHTML = `<span style="font-size:12px;color:var(--text2)">Trạng thái đăng ký: </span>` + statusBadge(currentShiftData.status);
     } else {
       bar.style.display = 'none';
     }
-  }).catch(() => {
-    currentShiftData = null;
-    renderShiftGrid(weekStart, null);
-  });
+  }).catch(() => { currentShiftData = null; renderShiftGrid(getWeekStart(currentWeekOffset), null); });
 }
 
 function renderShiftGrid(weekStart, shiftData) {
   const grid = document.getElementById('shift-days-grid');
   grid.innerHTML = DAY_KEYS.map((key, i) => {
-    const dayDate = new Date(weekStart);
-    dayDate.setDate(dayDate.getDate() + i);
-    const dayNum = dayDate.getDate();
-
-    // Parse existing shifts for this day
+    const dayDate = new Date(weekStart); dayDate.setDate(dayDate.getDate() + i);
     const existing = shiftData ? (shiftData[key] || '').split(',').filter(Boolean) : [];
-
     return `<div class="shift-day">
       <div class="shift-day-name">${DAY_NAMES[i]}</div>
-      <div class="shift-day-date">${dayNum}</div>
+      <div class="shift-day-date">${dayDate.getDate()}</div>
       <div class="shift-checkboxes">
         ${['sang','chieu','toi'].map(ca => {
-          const label = { sang: 'Sáng', chieu: 'Chiều', toi: 'Tối' }[ca];
+          const label = {sang:'Sáng',chieu:'Chiều',toi:'Tối'}[ca];
           const sel = existing.includes(ca) ? 'selected' : '';
           return `<label class="shift-cb ${ca} ${sel}" id="cb-${key}-${ca}" onclick="toggleShift(this,'${key}','${ca}')">
             <span class="shift-cb-tag">${label}</span>
@@ -1110,18 +1071,12 @@ function renderShiftGrid(weekStart, shiftData) {
   }).join('');
 }
 
-function toggleShift(el, day, ca) {
-  el.classList.toggle('selected');
-}
-
-function clearShift() {
-  document.querySelectorAll('.shift-cb').forEach(el => el.classList.remove('selected'));
-}
+function toggleShift(el) { el.classList.toggle('selected'); }
+function clearShift() { document.querySelectorAll('.shift-cb').forEach(el => el.classList.remove('selected')); }
 
 async function submitShift() {
   const weekStart = getWeekStart(currentWeekOffset);
   const week = getWeekStr(weekStart);
-
   const payload = { action: 'registerShift', week };
   DAY_KEYS.forEach(key => {
     const selected = [];
@@ -1134,77 +1089,80 @@ async function submitShift() {
 
   const btn = document.getElementById('btn-submit-shift');
   btn.disabled = true; btn.innerHTML = '<div class="spinner"></div>';
-
   const res = await apiPost(payload);
   btn.disabled = false; btn.innerHTML = 'Đăng ký ca';
 
-  if (res.success) {
-    showToast('Đăng ký ca thành công!');
-    loadShiftHistory();
-    loadShiftPage();
-  } else {
-    showToast(res.error || 'Lỗi', 'error');
-  }
+  if (res.success) { showToast('Đăng ký ca thành công!'); loadShiftHistory(); loadShiftPage(); }
+  else showToast(res.error || 'Lỗi', 'error');
 }
 
 function prevWeek() { currentWeekOffset--; loadShiftPage(); }
 function nextWeek() { currentWeekOffset++; loadShiftPage(); }
 
-// ── STORE ──
-let myStore = null;
-let storeTasksFull = [];
+async function loadShiftHistory() {
+  const tb = document.getElementById('shift-history-body');
+  try {
+    const res = await api({ action: 'getShifts' });
+    if (!res.success || !res.data.length) {
+      tb.innerHTML = '<tr><td colspan="9"><div class="empty-state" style="padding:24px"><p>Chưa có đăng ký ca nào</p></div></td></tr>';
+      return;
+    }
+    const list = res.data.sort((a,b) => b.week.localeCompare(a.week));
+    const caLabel = v => {
+      if (!v) return '<span style="color:var(--text3)">—</span>';
+      return v.split(',').filter(Boolean).map(ca => {
+        const lbl = {sang:'S',chieu:'C',toi:'T'}[ca] || ca;
+        return `<span class="badge badge-${ca==='sang'?'amber':ca==='chieu'?'blue':'gray'}" style="font-size:10px;padding:2px 5px">${lbl}</span>`;
+      }).join(' ');
+    };
+    tb.innerHTML = list.map(s => `<tr>
+      <td style="font-family:'DM Mono',monospace;font-size:12px">${s.week}</td>
+      ${DAY_KEYS.map(k => `<td>${caLabel(s[k])}</td>`).join('')}
+      <td>${statusBadge(s.status)}</td>
+    </tr>`).join('');
+  } catch(e) {
+    tb.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--red)">Lỗi tải dữ liệu</td></tr>';
+  }
+}
 
+// ── STORE ──
 async function loadMyStore() {
   const el = document.getElementById('store-info-card');
   const storeId = currentUser && currentUser.storeId;
 
   if (!storeId) {
-    el.innerHTML = `<div class="card">
-      <div class="empty-state">
-        <div class="icon">◈</div>
-        <p>Bạn chưa được gán vào store nào</p>
-        <p style="font-size:11px;margin-top:6px">Liên hệ admin để được phân công</p>
-      </div>
-    </div>`;
+    el.innerHTML = `<div class="card"><div class="empty-state"><div class="icon">◈</div><p>Bạn chưa được gán vào store nào</p><p style="font-size:11px;margin-top:6px">Liên hệ admin để được phân công</p></div></div>`;
     return;
   }
 
   try {
     const res = await api({ action: 'getStores' });
     if (!res.success) return;
-
     const store = res.data.find(s => s.id === storeId);
     if (!store) {
       el.innerHTML = `<div class="card"><div class="empty-state"><div class="icon">◈</div><p>Không tìm thấy thông tin store</p></div></div>`;
       return;
     }
-    myStore = store;
 
-    const platformColor = { etsy: '#f1641e', shopify: '#96bf48', amazon: '#ff9900', other: '#8b90a0' };
-    const pColor = platformColor[store.platform] || '#8b90a0';
-
+    const pColor = {etsy:'#f1641e',shopify:'#96bf48',amazon:'#ff9900',other:'#8b90a0'}[store.platform] || '#8b90a0';
     el.innerHTML = `
       <div class="card" style="border-color:var(--border2)">
         <div style="display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap">
-          <div style="width:52px;height:52px;border-radius:12px;background:${pColor}22;border:1px solid ${pColor}44;
-            display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">
-            ${{ etsy: '🛍', shopify: '🏪', amazon: '📦', other: '🔗' }[store.platform] || '🔗'}
+          <div style="width:52px;height:52px;border-radius:12px;background:${pColor}22;border:1px solid ${pColor}44;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">
+            ${{etsy:'🛍',shopify:'🏪',amazon:'📦',other:'🔗'}[store.platform]||'🔗'}
           </div>
           <div style="flex:1">
             <div style="font-size:18px;font-weight:600;margin-bottom:6px">${store.name}</div>
             <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
               <span class="badge" style="background:${pColor}22;color:${pColor};text-transform:uppercase">${store.platform}</span>
-              ${store.status === 'active'
-                ? '<span class="badge badge-green">Đang hoạt động</span>'
-                : '<span class="badge badge-red">Ngừng hoạt động</span>'}
+              ${store.status==='active'?'<span class="badge badge-green">Đang hoạt động</span>':'<span class="badge badge-red">Ngừng hoạt động</span>'}
             </div>
-            ${store.url ? `<a href="${store.url}" target="_blank" style="font-size:12px;color:var(--accent);word-break:break-all">${store.url}</a>` : ''}
-            ${store.note ? `<div style="font-size:12px;color:var(--text3);margin-top:8px">${store.note}</div>` : ''}
+            ${store.url?`<a href="${store.url}" target="_blank" style="font-size:12px;color:var(--accent);word-break:break-all">${store.url}</a>`:''}
+            ${store.note?`<div style="font-size:12px;color:var(--text3);margin-top:8px">${store.note}</div>`:''}
           </div>
         </div>
       </div>`;
 
-    // Load tasks for this store
     loadStoreTasks(storeId);
   } catch(e) {
     el.innerHTML = `<div class="card"><div class="empty-state"><div class="icon">◈</div><p>Lỗi tải dữ liệu store</p></div></div>`;
@@ -1213,7 +1171,7 @@ async function loadMyStore() {
 
 async function loadStoreTasks(storeId) {
   const card = document.getElementById('store-tasks-card');
-  const el = document.getElementById('store-task-list');
+  const el   = document.getElementById('store-task-list');
   card.style.display = 'block';
   el.innerHTML = '<div style="text-align:center;padding:20px"><div class="spinner"></div></div>';
 
@@ -1230,8 +1188,7 @@ async function loadStoreTasks(storeId) {
 function filterStoreTasks(status, btn) {
   document.querySelectorAll('.store-task-filter').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
-  const list = status === 'all' ? storeTasksFull : storeTasksFull.filter(t => t.status === status);
-  renderStoreTasks(list);
+  renderStoreTasks(status === 'all' ? storeTasksFull : storeTasksFull.filter(t => t.status === status));
 }
 
 function renderStoreTasks(list) {
@@ -1240,37 +1197,25 @@ function renderStoreTasks(list) {
     el.innerHTML = '<div class="empty-state" style="padding:28px"><div class="icon">◧</div><p>Không có task nào</p></div>';
     return;
   }
-
-  // Summary row
-  const total = list.length;
-  const done = list.filter(t => t.status === 'done').length;
-  const inprog = list.filter(t => t.status === 'in_progress').length;
+  const total = list.length, done = list.filter(t=>t.status==='done').length, inprog = list.filter(t=>t.status==='in_progress').length;
   const pct = Math.round(done / total * 100);
-
   el.innerHTML = `
     <div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap">
       <div style="flex:1;min-width:160px;background:var(--bg3);border-radius:8px;padding:12px 14px">
         <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:4px">Tiến độ</div>
         <div style="display:flex;align-items:center;gap:10px">
           <div style="flex:1;height:6px;background:var(--bg4);border-radius:3px;overflow:hidden">
-            <div style="width:${pct}%;height:100%;background:var(--green);border-radius:3px;transition:width .3s"></div>
+            <div style="width:${pct}%;height:100%;background:var(--green);border-radius:3px"></div>
           </div>
           <span style="font-family:'DM Mono',monospace;font-size:13px;color:var(--green);font-weight:500">${pct}%</span>
         </div>
       </div>
       <div style="display:flex;gap:8px">
-        <div style="background:var(--bg3);border-radius:8px;padding:10px 14px;text-align:center">
-          <div style="font-size:18px;font-weight:600;font-family:'DM Mono',monospace;color:var(--text)">${total}</div>
-          <div style="font-size:10px;color:var(--text3)">Tổng</div>
-        </div>
-        <div style="background:var(--bg3);border-radius:8px;padding:10px 14px;text-align:center">
-          <div style="font-size:18px;font-weight:600;font-family:'DM Mono',monospace;color:var(--accent)">${inprog}</div>
-          <div style="font-size:10px;color:var(--text3)">Đang làm</div>
-        </div>
-        <div style="background:var(--bg3);border-radius:8px;padding:10px 14px;text-align:center">
-          <div style="font-size:18px;font-weight:600;font-family:'DM Mono',monospace;color:var(--green)">${done}</div>
-          <div style="font-size:10px;color:var(--text3)">Hoàn thành</div>
-        </div>
+        ${[['Tổng','var(--text)',total],['Đang làm','var(--accent)',inprog],['Xong','var(--green)',done]].map(([l,c,v])=>`
+          <div style="background:var(--bg3);border-radius:8px;padding:10px 14px;text-align:center">
+            <div style="font-size:18px;font-weight:600;font-family:'DM Mono',monospace;color:${c}">${v}</div>
+            <div style="font-size:10px;color:var(--text3)">${l}</div>
+          </div>`).join('')}
       </div>
     </div>
     ${list.map(t => `
@@ -1278,52 +1223,26 @@ function renderStoreTasks(list) {
         <div class="task-header">
           <div>
             <div class="task-title">${t.title}</div>
-            ${t.description ? `<div style="font-size:12px;color:var(--text3);margin-top:3px">${t.description.substring(0,100)}${t.description.length>100?'...':''}</div>` : ''}
+            ${t.description?`<div style="font-size:12px;color:var(--text3);margin-top:3px">${t.description.substring(0,100)}${t.description.length>100?'...':''}</div>`:''}
             <div class="task-meta" style="margin-top:8px">
-              ${t.dueDate ? `<span>📅 Hạn: ${fmtDate(t.dueDate)}</span>` : ''}
+              ${t.dueDate?`<span>📅 Hạn: ${fmtDate(t.dueDate)}</span>`:''}
               <span>${priorityBadge(t.priority)}</span>
               <span>${statusBadge(t.status)}</span>
             </div>
           </div>
           <div class="task-actions">
-            ${t.status !== 'done' ? `
+            ${t.status!=='done'?`
               <select class="form-select" style="padding:5px 8px;font-size:12px;width:130px" onchange="updateTaskStatus('${t.id}',this.value);loadStoreTasks('${t.storeId}')">
                 <option value="pending" ${t.status==='pending'?'selected':''}>Chờ xử lý</option>
                 <option value="in_progress" ${t.status==='in_progress'?'selected':''}>Đang làm</option>
                 <option value="done">Hoàn thành</option>
               </select>
-            ` : ''}
+            `:''}
           </div>
         </div>
       </div>
     `).join('')}
   `;
-}
-
-async function loadShiftHistory() {
-  const tb = document.getElementById('shift-history-body');
-  try {
-    const res = await api({ action: 'getShifts' });
-    if (!res.success || !res.data.length) {
-      tb.innerHTML = '<tr><td colspan="9"><div class="empty-state" style="padding:24px"><p>Chưa có đăng ký ca nào</p></div></td></tr>';
-      return;
-    }
-    const list = res.data.sort((a,b) => b.week.localeCompare(a.week));
-    const caLabel = v => {
-      if (!v) return '<span style="color:var(--text3)">—</span>';
-      return v.split(',').filter(Boolean).map(ca => {
-        const cls = ca; const lbl = {sang:'S',chieu:'C',toi:'T'}[ca] || ca;
-        return `<span class="badge badge-${ca==='sang'?'amber':ca==='chieu'?'blue':'gray'}" style="font-size:10px;padding:2px 5px">${lbl}</span>`;
-      }).join(' ');
-    };
-    tb.innerHTML = list.map(s => `<tr>
-      <td style="font-family:'DM Mono',monospace;font-size:12px">${s.week}</td>
-      ${DAY_KEYS.map(k => `<td>${caLabel(s[k])}</td>`).join('')}
-      <td>${statusBadge(s.status)}</td>
-    </tr>`).join('');
-  } catch(e) {
-    tb.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--red)">Lỗi tải dữ liệu</td></tr>';
-  }
 }
 </script>
 </body>
