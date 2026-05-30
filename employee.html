@@ -1,0 +1,1309 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>POD Manager — Nhân viên</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0d0f14;
+  --bg2: #13161e;
+  --bg3: #1a1e2a;
+  --bg4: #222736;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.12);
+  --text: #e8eaf0;
+  --text2: #8b90a0;
+  --text3: #555c70;
+  --accent: #5b8df6;
+  --accent2: #3d6de8;
+  --green: #3ecf8e;
+  --amber: #f5a623;
+  --red: #f05252;
+  --pink: #e879a0;
+  --radius: 10px;
+}
+
+body {
+  font-family: 'Sora', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ── LOGIN ── */
+#login-screen {
+  position: fixed; inset: 0;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 999;
+}
+.login-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 40px;
+  width: 380px;
+}
+.login-logo { text-align: center; margin-bottom: 28px; }
+.login-logo .title { font-size: 22px; font-weight: 600; }
+.login-logo .title span { color: var(--accent); }
+.login-logo .sub { font-size: 12px; color: var(--text3); margin-top: 4px; }
+.login-error {
+  background: rgba(240,82,82,0.1); border: 1px solid rgba(240,82,82,0.2);
+  color: var(--red); padding: 10px 12px; border-radius: 8px;
+  font-size: 13px; margin-bottom: 16px; display: none;
+}
+
+/* ── APP ── */
+#app { display: none; min-height: 100vh; }
+
+/* ── TOPBAR ── */
+.topbar {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--bg2);
+  position: sticky; top: 0; z-index: 50;
+}
+.topbar-left { display: flex; align-items: center; gap: 12px; }
+.topbar-brand { font-size: 15px; font-weight: 600; }
+.topbar-brand span { color: var(--accent); }
+.topbar-date { font-size: 12px; color: var(--text3); }
+.topbar-right { display: flex; align-items: center; gap: 12px; }
+.user-chip {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 8px; padding: 6px 12px;
+}
+.user-avatar {
+  width: 28px; height: 28px;
+  background: linear-gradient(135deg, var(--accent), var(--pink));
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 600; color: #fff; flex-shrink: 0;
+}
+.user-name { font-size: 13px; font-weight: 500; }
+
+/* ── NAV TABS ── */
+.nav-tabs {
+  display: flex; gap: 2px;
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  overflow-x: auto;
+}
+.nav-tab {
+  display: flex; align-items: center; gap: 7px;
+  padding: 8px 14px; border-radius: 8px;
+  cursor: pointer; color: var(--text2);
+  font-size: 13px; font-weight: 400;
+  border: none; background: none;
+  font-family: 'Sora', sans-serif;
+  transition: all 0.15s; white-space: nowrap;
+}
+.nav-tab:hover { background: var(--bg3); color: var(--text); }
+.nav-tab.active { background: rgba(91,141,246,0.15); color: var(--accent); font-weight: 500; }
+.nav-tab .icon { font-size: 15px; }
+
+/* ── CONTENT ── */
+.content { padding: 24px; max-width: 900px; margin: 0 auto; }
+
+.page { display: none; }
+.page.active { display: block; }
+
+/* ── CARDS ── */
+.card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px;
+}
+.card + .card { margin-top: 16px; }
+
+/* ── CHECKIN CARD ── */
+.checkin-hero {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 16px; padding: 28px;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 24px; margin-bottom: 16px;
+}
+.checkin-status { flex: 1; }
+.checkin-label {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--text3); margin-bottom: 6px;
+}
+.checkin-state {
+  font-size: 22px; font-weight: 600; margin-bottom: 4px;
+}
+.checkin-state.working { color: var(--green); }
+.checkin-state.not-in { color: var(--text2); }
+.checkin-meta { font-size: 12px; color: var(--text3); font-family: 'DM Mono', monospace; }
+.checkin-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+/* ── TIME LOG FORM ── */
+.timelog-form {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 12px; padding: 20px; margin-bottom: 16px;
+}
+.timelog-title {
+  font-size: 13px; font-weight: 600; margin-bottom: 16px;
+  color: var(--text2);
+}
+.timelog-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+  margin-bottom: 12px;
+}
+.time-input-group label {
+  display: block; font-size: 11px; font-weight: 600;
+  color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em;
+  margin-bottom: 6px;
+}
+.time-input-group input {
+  width: 100%; background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); font-family: 'DM Mono', monospace;
+  font-size: 14px; padding: 9px 12px; outline: none;
+  transition: border-color 0.15s;
+}
+.time-input-group input:focus { border-color: var(--accent); }
+
+/* ── STATS GRID ── */
+.stats-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 12px; margin-bottom: 16px;
+}
+.stat-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px;
+  position: relative; overflow: hidden;
+}
+.stat-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+}
+.stat-card.blue::before { background: var(--accent); }
+.stat-card.green::before { background: var(--green); }
+.stat-card.amber::before { background: var(--amber); }
+.stat-label {
+  font-size: 10px; font-weight: 600; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--text3); margin-bottom: 6px;
+}
+.stat-value {
+  font-size: 26px; font-weight: 600; font-family: 'DM Mono', monospace;
+  line-height: 1; margin-bottom: 3px;
+}
+.stat-card.blue .stat-value { color: var(--accent); }
+.stat-card.green .stat-value { color: var(--green); }
+.stat-card.amber .stat-value { color: var(--amber); }
+.stat-sub { font-size: 11px; color: var(--text3); }
+
+/* ── TABLE ── */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--text3);
+  padding: 10px 14px; text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+td {
+  padding: 12px 14px; border-bottom: 1px solid var(--border);
+  font-size: 13px; color: var(--text);
+}
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--bg3); }
+
+/* ── BADGE ── */
+.badge {
+  display: inline-flex; align-items: center;
+  padding: 3px 8px; border-radius: 6px;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
+}
+.badge-green { background: rgba(62,207,142,0.15); color: var(--green); }
+.badge-amber { background: rgba(245,166,35,0.15); color: var(--amber); }
+.badge-red { background: rgba(240,82,82,0.15); color: var(--red); }
+.badge-blue { background: rgba(91,141,246,0.15); color: var(--accent); }
+.badge-gray { background: rgba(255,255,255,0.06); color: var(--text3); }
+
+/* ── FORM ── */
+.form-group { margin-bottom: 14px; }
+.form-label { display: block; font-size: 12px; font-weight: 500; color: var(--text2); margin-bottom: 6px; }
+.form-input, .form-select, .form-textarea {
+  width: 100%; background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); font-family: 'Sora', sans-serif;
+  font-size: 13.5px; padding: 9px 12px; outline: none;
+  transition: border-color 0.15s;
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--accent); }
+.form-select option { background: var(--bg3); }
+.form-textarea { resize: vertical; min-height: 70px; }
+
+/* ── BTN ── */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px; border-radius: 8px;
+  font-size: 13px; font-weight: 500;
+  font-family: 'Sora', sans-serif;
+  cursor: pointer; border: none; transition: all 0.15s;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent2); }
+.btn-success { background: rgba(62,207,142,0.15); color: var(--green); border: 1px solid rgba(62,207,142,0.2); }
+.btn-success:hover { background: rgba(62,207,142,0.25); }
+.btn-danger { background: rgba(240,82,82,0.15); color: var(--red); border: 1px solid rgba(240,82,82,0.2); }
+.btn-danger:hover { background: rgba(240,82,82,0.25); }
+.btn-ghost { background: var(--bg3); color: var(--text2); border: 1px solid var(--border); }
+.btn-ghost:hover { color: var(--text); border-color: var(--border2); }
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-full { width: 100%; justify-content: center; }
+
+/* ── SECTION HEADER ── */
+.section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px;
+}
+.section-title { font-size: 14px; font-weight: 600; }
+
+/* ── TASK CARD ── */
+.task-card {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 10px; padding: 14px 16px;
+  margin-bottom: 8px; transition: border-color 0.15s;
+}
+.task-card:hover { border-color: var(--border2); }
+.task-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.task-title { font-size: 13.5px; font-weight: 500; margin-bottom: 4px; }
+.task-meta { font-size: 11px; color: var(--text3); display: flex; gap: 12px; flex-wrap: wrap; }
+.task-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+/* ── SHIFT GRID ── */
+.shift-week-nav {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 16px;
+}
+.shift-days {
+  display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px;
+  margin-bottom: 16px;
+}
+.shift-day {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px 8px; text-align: center;
+}
+.shift-day-name {
+  font-size: 10px; font-weight: 600; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--text3); margin-bottom: 8px;
+}
+.shift-day-date { font-size: 16px; font-weight: 600; margin-bottom: 10px; font-family: 'DM Mono', monospace; }
+.shift-checkboxes { display: flex; flex-direction: column; gap: 5px; }
+.shift-cb {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; cursor: pointer; padding: 4px 6px;
+  border-radius: 5px; transition: background 0.1s;
+  justify-content: center;
+}
+.shift-cb:hover { background: var(--bg4); }
+.shift-cb input { display: none; }
+.shift-cb-tag {
+  padding: 2px 8px; border-radius: 4px; font-size: 10px;
+  font-weight: 600; transition: all 0.1s;
+}
+.shift-cb.sang .shift-cb-tag { background: rgba(245,166,35,0.1); color: var(--amber); border: 1px solid transparent; }
+.shift-cb.chieu .shift-cb-tag { background: rgba(91,141,246,0.1); color: var(--accent); border: 1px solid transparent; }
+.shift-cb.toi .shift-cb-tag { background: rgba(232,121,160,0.1); color: var(--pink); border: 1px solid transparent; }
+.shift-cb.selected.sang .shift-cb-tag { border-color: var(--amber); background: rgba(245,166,35,0.2); }
+.shift-cb.selected.chieu .shift-cb-tag { border-color: var(--accent); background: rgba(91,141,246,0.2); }
+.shift-cb.selected.toi .shift-cb-tag { border-color: var(--pink); background: rgba(232,121,160,0.2); }
+
+/* ── EMPTY STATE ── */
+.empty-state { text-align: center; padding: 40px 20px; color: var(--text3); }
+.empty-state .icon { font-size: 32px; margin-bottom: 10px; }
+.empty-state p { font-size: 13px; }
+
+/* ── SPINNER ── */
+.spinner {
+  display: inline-block; width: 16px; height: 16px;
+  border: 2px solid var(--border2); border-top-color: var(--accent);
+  border-radius: 50%; animation: spin 0.6s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed; bottom: 24px; right: 24px;
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: 10px; padding: 12px 18px;
+  font-size: 13px; color: var(--text);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4); z-index: 999;
+  transform: translateY(80px); opacity: 0; transition: all 0.25s;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.success { border-color: rgba(62,207,142,0.3); }
+.toast.error { border-color: rgba(240,82,82,0.3); }
+
+/* ── MODAL ── */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+  z-index: 200; display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity 0.2s;
+}
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+.modal {
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: 14px; padding: 28px; width: 420px;
+  max-width: 90vw; max-height: 85vh; overflow-y: auto;
+  transform: translateY(16px); transition: transform 0.2s;
+}
+.modal-overlay.open .modal { transform: translateY(0); }
+.modal-title { font-size: 15px; font-weight: 600; margin-bottom: 18px; }
+.modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; }
+
+/* ── DATE FILTER ── */
+.date-filter {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.date-filter input {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); font-family: 'Sora', sans-serif;
+  font-size: 13px; padding: 7px 10px; outline: none;
+  transition: border-color 0.15s; width: 145px;
+}
+.date-filter input:focus { border-color: var(--accent); }
+
+/* ── HOURS HIGHLIGHT ── */
+.hours-highlight {
+  font-family: 'DM Mono', monospace;
+  font-size: 13px; font-weight: 500; color: var(--accent);
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="title">POD <span>Manager</span></div>
+      <div class="sub">Cổng nhân viên</div>
+    </div>
+    <div class="login-error" id="login-error"></div>
+    <div class="form-group">
+      <label class="form-label">Tên đăng nhập</label>
+      <input class="form-input" id="inp-username" placeholder="username" autocomplete="username">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Mật khẩu</label>
+      <input class="form-input" id="inp-password" type="password" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn btn-primary btn-full" style="padding:11px" id="login-btn" onclick="doLogin()">
+      Đăng nhập
+    </button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-brand">POD <span>Manager</span></div>
+      <div class="topbar-date" id="today-date"></div>
+    </div>
+    <div class="topbar-right">
+      <div class="user-chip">
+        <div class="user-avatar" id="user-avatar-init">A</div>
+        <div class="user-name" id="sidebar-username">—</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="doLogout()">Đăng xuất</button>
+    </div>
+  </div>
+
+  <!-- NAV TABS -->
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showPage('checkin')" id="nav-checkin">
+      <span class="icon">◷</span> Chấm công
+    </button>
+    <button class="nav-tab" onclick="showPage('tasks')" id="nav-tasks">
+      <span class="icon">◧</span> Công việc
+    </button>
+    <button class="nav-tab" onclick="showPage('shifts')" id="nav-shifts">
+      <span class="icon">◫</span> Đăng ký ca
+    </button>
+    <button class="nav-tab" onclick="showPage('store')" id="nav-store">
+      <span class="icon">◈</span> Store của tôi
+    </button>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════
+       PAGE: CHẤM CÔNG
+  ══════════════════════════════════════════════════ -->
+  <div class="page active" id="page-checkin">
+    <div class="content">
+
+      <!-- Status hero -->
+      <div class="checkin-hero">
+        <div class="checkin-status">
+          <div class="checkin-label">Trạng thái hôm nay</div>
+          <div class="checkin-state not-in" id="checkin-state-text">Chưa chấm công</div>
+          <div class="checkin-meta" id="checkin-meta-text">—</div>
+        </div>
+        <div class="checkin-actions">
+          <button class="btn btn-success" id="btn-checkin" onclick="openModal('modal-checkin')">
+            ▶ Check-in
+          </button>
+          <button class="btn btn-ghost" id="btn-checkout" onclick="openModal('modal-checkout')" style="display:none">
+            ■ Check-out
+          </button>
+        </div>
+      </div>
+
+      <!-- Stats tháng này -->
+      <div class="stats-grid">
+        <div class="stat-card green">
+          <div class="stat-label">Tổng giờ làm</div>
+          <div class="stat-value" id="stat-total-hours">—</div>
+          <div class="stat-sub">tháng này</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-label">Số ngày làm</div>
+          <div class="stat-value" id="stat-total-days">—</div>
+          <div class="stat-sub">tháng này</div>
+        </div>
+        <div class="stat-card amber">
+          <div class="stat-label">Trung bình / ngày</div>
+          <div class="stat-value" id="stat-avg-hours">—</div>
+          <div class="stat-sub">giờ làm</div>
+        </div>
+      </div>
+
+      <!-- History table -->
+      <div class="card">
+        <div class="section-header">
+          <div class="section-title">Lịch sử chấm công</div>
+          <div class="date-filter">
+            <input type="date" id="att-from">
+            <span style="color:var(--text3)">→</span>
+            <input type="date" id="att-to">
+            <button class="btn btn-ghost btn-sm" onclick="loadAttendance()">Lọc</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Ngày</th>
+                <th>Check-in</th>
+                <th>Check-out</th>
+                <th>Giờ làm</th>
+                <th>Trạng thái</th>
+                <th>Ghi chú</th>
+              </tr>
+            </thead>
+            <tbody id="att-table-body">
+              <tr><td colspan="6" style="text-align:center;padding:28px"><div class="spinner"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════
+       PAGE: CÔNG VIỆC
+  ══════════════════════════════════════════════════ -->
+  <div class="page" id="page-tasks">
+    <div class="content">
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm task-filter active" onclick="filterTasks('all',this)">Tất cả</button>
+        <button class="btn btn-ghost btn-sm task-filter" onclick="filterTasks('pending',this)">Chờ xử lý</button>
+        <button class="btn btn-ghost btn-sm task-filter" onclick="filterTasks('in_progress',this)">Đang làm</button>
+        <button class="btn btn-ghost btn-sm task-filter" onclick="filterTasks('done',this)">Hoàn thành</button>
+      </div>
+      <div id="task-list">
+        <div style="text-align:center;padding:32px"><div class="spinner"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════
+       PAGE: ĐĂNG KÝ CA
+  ══════════════════════════════════════════════════ -->
+  <div class="page" id="page-shifts">
+    <div class="content">
+      <div class="card">
+        <div class="section-header">
+          <div class="section-title">Đăng ký ca làm việc</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <button class="btn btn-ghost btn-sm" onclick="prevWeek()">‹</button>
+            <span id="week-label" style="font-size:13px;font-family:'DM Mono',monospace;color:var(--text2)"></span>
+            <button class="btn btn-ghost btn-sm" onclick="nextWeek()">›</button>
+          </div>
+        </div>
+
+        <!-- Status badge nếu đã duyệt -->
+        <div id="shift-status-bar" style="display:none;margin-bottom:14px">
+          <span id="shift-status-badge"></span>
+        </div>
+
+        <div class="shift-days" id="shift-days-grid"></div>
+
+        <div style="display:flex;justify-content:flex-end;gap:8px">
+          <button class="btn btn-ghost" onclick="clearShift()">Xóa chọn</button>
+          <button class="btn btn-primary" onclick="submitShift()" id="btn-submit-shift">Đăng ký ca</button>
+        </div>
+      </div>
+
+      <!-- Lịch sử đăng ký ca -->
+      <div class="card">
+        <div class="section-title" style="margin-bottom:14px">Lịch sử đăng ký</div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Tuần</th>
+                <th>T2</th><th>T3</th><th>T4</th><th>T5</th><th>T6</th><th>T7</th><th>CN</th>
+                <th>Trạng thái</th>
+              </tr>
+            </thead>
+            <tbody id="shift-history-body">
+              <tr><td colspan="9" style="text-align:center;padding:24px"><div class="spinner"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════
+       PAGE: STORE CỦA TÔI
+  ══════════════════════════════════════════════════ -->
+  <div class="page" id="page-store">
+    <div class="content">
+
+      <!-- Store info -->
+      <div id="store-info-card">
+        <div style="text-align:center;padding:32px"><div class="spinner"></div></div>
+      </div>
+
+      <!-- Tasks của store này -->
+      <div class="card" id="store-tasks-card" style="margin-top:16px;display:none">
+        <div class="section-header">
+          <div class="section-title">Task liên quan đến store</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button class="btn btn-ghost btn-sm store-task-filter active" onclick="filterStoreTasks('all',this)">Tất cả</button>
+            <button class="btn btn-ghost btn-sm store-task-filter" onclick="filterStoreTasks('pending',this)">Chờ xử lý</button>
+            <button class="btn btn-ghost btn-sm store-task-filter" onclick="filterStoreTasks('in_progress',this)">Đang làm</button>
+            <button class="btn btn-ghost btn-sm store-task-filter" onclick="filterStoreTasks('done',this)">Hoàn thành</button>
+          </div>
+        </div>
+        <div id="store-task-list"></div>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<!-- ══ MODALS ══ -->
+
+<!-- Check-in modal -->
+<div class="modal-overlay" id="modal-checkin">
+  <div class="modal">
+    <div class="modal-title">◷ Check-in hôm nay</div>
+    <div class="form-group">
+      <label class="form-label">Giờ vào *</label>
+      <input class="form-input" type="time" id="ci-time" style="font-family:'DM Mono',monospace">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Ghi chú</label>
+      <textarea class="form-textarea" id="ci-note" placeholder="Ghi chú thêm (nếu có)..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-checkin')">Hủy</button>
+      <button class="btn btn-success" onclick="doCheckIn()">▶ Xác nhận Check-in</button>
+    </div>
+  </div>
+</div>
+
+<!-- Check-out modal -->
+<div class="modal-overlay" id="modal-checkout">
+  <div class="modal">
+    <div class="modal-title">■ Check-out hôm nay</div>
+    <div class="form-group">
+      <label class="form-label">Giờ ra *</label>
+      <input class="form-input" type="time" id="co-time" style="font-family:'DM Mono',monospace">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Ghi chú</label>
+      <textarea class="form-textarea" id="co-note" placeholder="Ghi chú thêm (nếu có)..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-checkout')">Hủy</button>
+      <button class="btn btn-danger" onclick="doCheckOut()">■ Xác nhận Check-out</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CONFIG ──
+const API_URL = 'https://script.google.com/macros/s/AKfycbwYWbnfoOLKr23049hmtf2mPyjZINzxkwyU25koD8G9OoplpQhoqaI2SjuJrRiQm_Hu/exec'; // ← thay URL của bạn
+
+// ── STATE ──
+let token = localStorage.getItem('pod_token_emp');
+let currentUser = JSON.parse(localStorage.getItem('pod_user_emp') || 'null');
+let allTasksFull = [];
+let currentTaskFilter = 'all';
+let currentWeekOffset = 0; // 0 = tuần này
+let currentShiftData = null;
+let allShifts = [];
+
+// ── INIT ──
+document.addEventListener('DOMContentLoaded', () => {
+  const d = new Date();
+  document.getElementById('today-date').textContent =
+    d.toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+  // Set mặc định filter tháng này
+  const today = d.toISOString().split('T')[0];
+  const firstOfMonth = new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0];
+  document.getElementById('att-from').value = firstOfMonth;
+  document.getElementById('att-to').value = today;
+
+  if (token && currentUser) showApp();
+
+  document.getElementById('inp-password').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doLogin();
+  });
+});
+
+// ── API ──
+async function api(params) {
+  const url = new URL(API_URL);
+  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+  if (token) url.searchParams.set('token', token);
+  const res = await fetch(url.toString(), { redirect: 'follow' });
+  return res.json();
+}
+
+async function apiPost(params) {
+  if (token) params.token = token;
+  const res = await fetch(API_URL, {
+    method: 'POST', body: JSON.stringify(params), redirect: 'follow'
+  });
+  return res.json();
+}
+
+// ── AUTH ──
+async function doLogin() {
+  const username = document.getElementById('inp-username').value.trim();
+  const password = document.getElementById('inp-password').value;
+  const btn = document.getElementById('login-btn');
+  if (!username || !password) return;
+
+  btn.innerHTML = '<div class="spinner"></div> Đang đăng nhập...';
+  btn.disabled = true;
+
+  try {
+    const res = await api({ action: 'login', username, password });
+    if (res.success) {
+      token = res.token;
+      currentUser = res.user;
+      localStorage.setItem('pod_token_emp', token);
+      localStorage.setItem('pod_user_emp', JSON.stringify(currentUser));
+      showApp();
+    } else {
+      const el = document.getElementById('login-error');
+      el.textContent = res.error || 'Sai thông tin đăng nhập';
+      el.style.display = 'block';
+    }
+  } catch(e) {
+    const el = document.getElementById('login-error');
+    el.textContent = 'Không thể kết nối server';
+    el.style.display = 'block';
+  }
+  btn.innerHTML = 'Đăng nhập';
+  btn.disabled = false;
+}
+
+function doLogout() {
+  api({ action: 'logout' }).catch(() => {});
+  token = null; currentUser = null;
+  localStorage.removeItem('pod_token_emp');
+  localStorage.removeItem('pod_user_emp');
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  if (currentUser) {
+    document.getElementById('sidebar-username').textContent = currentUser.name || currentUser.username;
+    document.getElementById('user-avatar-init').textContent = (currentUser.name || 'A')[0].toUpperCase();
+  }
+  loadTodayStatus();
+  loadAttendance();
+  loadTasks();
+  loadShiftPage();
+  loadShiftHistory();
+  loadMyStore();
+}
+
+// ── NAVIGATION ──
+function showPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.getElementById('nav-' + page).classList.add('active');
+}
+
+// ── MODAL ──
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.addEventListener('click', e => {
+  if (e.target.classList.contains('modal-overlay')) e.target.classList.remove('open');
+});
+
+// ── TOAST ──
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + type + ' show';
+  setTimeout(() => t.className = 'toast', 3000);
+}
+
+// ── HELPERS ──
+function fmtTime(iso) {
+  if (!iso) return '—';
+  try { return new Date(iso).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }); }
+  catch { return '—'; }
+}
+
+function fmtDate(str) {
+  if (!str) return '—';
+  try { return new Date(str).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }); }
+  catch { return str; }
+}
+
+function calcHours(inIso, outIso) {
+  if (!inIso || !outIso) return null;
+  const diff = (new Date(outIso) - new Date(inIso)) / 36e5;
+  return diff > 0 ? diff : null;
+}
+
+function statusBadge(s) {
+  const map = {
+    pending: ['amber','Chờ xử lý'], in_progress: ['blue','Đang làm'],
+    done: ['green','Hoàn thành'], working: ['green','Đang làm'],
+    approved: ['green','Đã duyệt'], rejected: ['red','Từ chối'],
+    not_checked_in: ['gray','Chưa chấm công'],
+  };
+  const [cls, label] = map[s] || ['gray', s];
+  return `<span class="badge badge-${cls}">${label}</span>`;
+}
+
+function priorityBadge(p) {
+  const map = { low: ['gray','Thấp'], normal: ['blue','Bình thường'], high: ['amber','Cao'], urgent: ['red','Khẩn'] };
+  const [cls, label] = map[p] || ['gray', p];
+  return `<span class="badge badge-${cls}">${label}</span>`;
+}
+
+// ── TODAY STATUS ──
+async function loadTodayStatus() {
+  try {
+    const res = await api({ action: 'getTodayAttendance' });
+    if (!res.success) return;
+    const records = res.data;
+    const today = records.find(r => r.userId === currentUser.id);
+
+    const stateEl = document.getElementById('checkin-state-text');
+    const metaEl = document.getElementById('checkin-meta-text');
+    const btnIn = document.getElementById('btn-checkin');
+    const btnOut = document.getElementById('btn-checkout');
+
+    // Pre-fill checkout time modal
+    const nowStr = new Date().toTimeString().slice(0, 5);
+    document.getElementById('co-time').value = nowStr;
+    document.getElementById('ci-time').value = nowStr;
+
+    if (!today) {
+      stateEl.textContent = 'Chưa chấm công';
+      stateEl.className = 'checkin-state not-in';
+      metaEl.textContent = '—';
+      btnIn.style.display = 'inline-flex';
+      btnOut.style.display = 'none';
+    } else if (today.status === 'working') {
+      stateEl.textContent = 'Đang làm việc';
+      stateEl.className = 'checkin-state working';
+      metaEl.textContent = 'Check-in lúc ' + fmtTime(today.checkIn);
+      btnIn.style.display = 'none';
+      btnOut.style.display = 'inline-flex';
+    } else {
+      stateEl.textContent = 'Đã hoàn thành';
+      stateEl.className = 'checkin-state';
+      stateEl.style.color = 'var(--text2)';
+      const hrs = calcHours(today.checkIn, today.checkOut);
+      metaEl.textContent = `${fmtTime(today.checkIn)} → ${fmtTime(today.checkOut)}${hrs ? '  (' + hrs.toFixed(1) + 'h)' : ''}`;
+      btnIn.style.display = 'none';
+      btnOut.style.display = 'none';
+    }
+  } catch(e) {}
+}
+
+// ── CHECK IN ──
+async function doCheckIn() {
+  const timeVal = document.getElementById('ci-time').value;
+  const note = document.getElementById('ci-note').value.trim();
+  if (!timeVal) return showToast('Chọn giờ check-in', 'error');
+
+  // Build ISO from today's date + chosen time
+  const today = new Date();
+  const [h, m] = timeVal.split(':');
+  today.setHours(parseInt(h), parseInt(m), 0, 0);
+  const checkInISO = today.toISOString();
+
+  const res = await apiPost({ action: 'checkIn', checkInTime: checkInISO, note });
+  if (res.success) {
+    showToast('Check-in thành công!');
+    closeModal('modal-checkin');
+    loadTodayStatus();
+    loadAttendance();
+  } else {
+    showToast(res.error || 'Lỗi', 'error');
+  }
+}
+
+// ── CHECK OUT ──
+async function doCheckOut() {
+  const timeVal = document.getElementById('co-time').value;
+  const note = document.getElementById('co-note').value.trim();
+  if (!timeVal) return showToast('Chọn giờ check-out', 'error');
+
+  const today = new Date();
+  const [h, m] = timeVal.split(':');
+  today.setHours(parseInt(h), parseInt(m), 0, 0);
+  const checkOutISO = today.toISOString();
+
+  const res = await apiPost({ action: 'checkOut', checkOutTime: checkOutISO, note });
+  if (res.success) {
+    showToast('Check-out thành công!');
+    closeModal('modal-checkout');
+    loadTodayStatus();
+    loadAttendance();
+  } else {
+    showToast(res.error || 'Lỗi', 'error');
+  }
+}
+
+// ── ATTENDANCE LIST ──
+async function loadAttendance() {
+  const startDate = document.getElementById('att-from').value;
+  const endDate = document.getElementById('att-to').value;
+  const tb = document.getElementById('att-table-body');
+  tb.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px"><div class="spinner"></div></td></tr>';
+
+  try {
+    const res = await api({ action: 'getAttendance', startDate, endDate });
+    if (!res.success) return;
+
+    const list = res.data.sort((a, b) => b.date.localeCompare(a.date));
+
+    // Compute stats
+    let totalHours = 0;
+    let workDays = 0;
+    list.forEach(r => {
+      const h = calcHours(r.checkIn, r.checkOut);
+      if (h) { totalHours += h; workDays++; }
+    });
+    document.getElementById('stat-total-hours').textContent = totalHours.toFixed(1) + 'h';
+    document.getElementById('stat-total-days').textContent = workDays + ' ngày';
+    document.getElementById('stat-avg-hours').textContent = workDays > 0 ? (totalHours / workDays).toFixed(1) + 'h' : '—';
+
+    if (!list.length) {
+      tb.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="icon">◷</div><p>Không có dữ liệu trong khoảng thời gian này</p></div></td></tr>';
+      return;
+    }
+
+    tb.innerHTML = list.map(r => {
+      const hrs = calcHours(r.checkIn, r.checkOut);
+      return `<tr>
+        <td style="font-family:'DM Mono',monospace;font-size:12px">${r.date}</td>
+        <td style="font-family:'DM Mono',monospace;color:var(--green)">${fmtTime(r.checkIn)}</td>
+        <td style="font-family:'DM Mono',monospace;color:var(--text2)">${fmtTime(r.checkOut)}</td>
+        <td class="hours-highlight">${hrs ? hrs.toFixed(1) + 'h' : '—'}</td>
+        <td>${statusBadge(r.status === 'done' ? 'done' : r.status)}</td>
+        <td style="font-size:12px;color:var(--text3)">${r.note || '—'}</td>
+      </tr>`;
+    }).join('');
+  } catch(e) {
+    tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--red)">Lỗi tải dữ liệu</td></tr>';
+  }
+}
+
+// ── TASKS ──
+async function loadTasks() {
+  try {
+    const res = await api({ action: 'getTasks' });
+    if (res.success) {
+      allTasksFull = res.data;
+      filterTasks(currentTaskFilter);
+    }
+  } catch(e) {}
+}
+
+function filterTasks(status, btn) {
+  currentTaskFilter = status;
+  document.querySelectorAll('.task-filter').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  let list = allTasksFull;
+  if (status !== 'all') list = list.filter(t => t.status === status);
+  renderTasks(list);
+}
+
+function renderTasks(list) {
+  const el = document.getElementById('task-list');
+  if (!list.length) {
+    el.innerHTML = '<div class="empty-state"><div class="icon">◧</div><p>Không có công việc nào</p></div>';
+    return;
+  }
+  el.innerHTML = list.map(t => `
+    <div class="task-card">
+      <div class="task-header">
+        <div>
+          <div class="task-title">${t.title}</div>
+          ${t.description ? `<div style="font-size:12px;color:var(--text3);margin-top:3px">${t.description.substring(0,100)}${t.description.length>100?'...':''}</div>` : ''}
+          <div class="task-meta" style="margin-top:8px">
+            ${t.dueDate ? `<span>📅 Hạn: ${fmtDate(t.dueDate)}</span>` : ''}
+            <span>${priorityBadge(t.priority)}</span>
+            <span>${statusBadge(t.status)}</span>
+          </div>
+        </div>
+        <div class="task-actions">
+          ${t.status !== 'done' ? `
+            <select class="form-select" style="padding:5px 8px;font-size:12px;width:130px" onchange="updateTaskStatus('${t.id}',this.value)">
+              <option value="pending" ${t.status==='pending'?'selected':''}>Chờ xử lý</option>
+              <option value="in_progress" ${t.status==='in_progress'?'selected':''}>Đang làm</option>
+              <option value="done" ${t.status==='done'?'selected':''}>Hoàn thành</option>
+            </select>
+          ` : ''}
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function updateTaskStatus(taskId, status) {
+  const res = await apiPost({ action: 'updateTask', taskId, status });
+  if (res.success) { showToast('Đã cập nhật trạng thái'); loadTasks(); }
+  else showToast(res.error, 'error');
+}
+
+// ── SHIFT ──
+const DAY_NAMES = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+
+function getWeekStart(offset) {
+  const d = new Date();
+  const day = d.getDay(); // 0=Sun
+  const diff = (day === 0 ? -6 : 1 - day); // Mon as start
+  d.setDate(d.getDate() + diff + offset * 7);
+  d.setHours(0,0,0,0);
+  return d;
+}
+
+function getWeekStr(d) {
+  // ISO week number
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  const weekNo = Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+  return date.getUTCFullYear() + '-W' + String(weekNo).padStart(2, '0');
+}
+
+function loadShiftPage() {
+  const weekStart = getWeekStart(currentWeekOffset);
+  const weekStr = getWeekStr(weekStart);
+  const weekEnd = new Date(weekStart); weekEnd.setDate(weekEnd.getDate() + 6);
+
+  document.getElementById('week-label').textContent =
+    weekStart.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }) + ' – ' +
+    weekEnd.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+  // Load shift for this week if exists
+  api({ action: 'getShifts', week: weekStr }).then(res => {
+    if (res.success && res.data.length > 0) {
+      currentShiftData = res.data[0];
+    } else {
+      currentShiftData = null;
+    }
+    renderShiftGrid(weekStart, currentShiftData);
+
+    // Show status
+    const bar = document.getElementById('shift-status-bar');
+    if (currentShiftData && currentShiftData.status) {
+      bar.style.display = 'block';
+      document.getElementById('shift-status-badge').outerHTML =
+        `<span id="shift-status-badge">${statusBadge(currentShiftData.status)}</span>`;
+      document.getElementById('shift-status-bar').innerHTML =
+        `<span style="font-size:12px;color:var(--text2)">Trạng thái đăng ký: </span>` +
+        statusBadge(currentShiftData.status);
+    } else {
+      bar.style.display = 'none';
+    }
+  }).catch(() => {
+    currentShiftData = null;
+    renderShiftGrid(weekStart, null);
+  });
+}
+
+function renderShiftGrid(weekStart, shiftData) {
+  const grid = document.getElementById('shift-days-grid');
+  grid.innerHTML = DAY_KEYS.map((key, i) => {
+    const dayDate = new Date(weekStart);
+    dayDate.setDate(dayDate.getDate() + i);
+    const dayNum = dayDate.getDate();
+
+    // Parse existing shifts for this day
+    const existing = shiftData ? (shiftData[key] || '').split(',').filter(Boolean) : [];
+
+    return `<div class="shift-day">
+      <div class="shift-day-name">${DAY_NAMES[i]}</div>
+      <div class="shift-day-date">${dayNum}</div>
+      <div class="shift-checkboxes">
+        ${['sang','chieu','toi'].map(ca => {
+          const label = { sang: 'Sáng', chieu: 'Chiều', toi: 'Tối' }[ca];
+          const sel = existing.includes(ca) ? 'selected' : '';
+          return `<label class="shift-cb ${ca} ${sel}" id="cb-${key}-${ca}" onclick="toggleShift(this,'${key}','${ca}')">
+            <span class="shift-cb-tag">${label}</span>
+          </label>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleShift(el, day, ca) {
+  el.classList.toggle('selected');
+}
+
+function clearShift() {
+  document.querySelectorAll('.shift-cb').forEach(el => el.classList.remove('selected'));
+}
+
+async function submitShift() {
+  const weekStart = getWeekStart(currentWeekOffset);
+  const week = getWeekStr(weekStart);
+
+  const payload = { action: 'registerShift', week };
+  DAY_KEYS.forEach(key => {
+    const selected = [];
+    ['sang','chieu','toi'].forEach(ca => {
+      const el = document.getElementById(`cb-${key}-${ca}`);
+      if (el && el.classList.contains('selected')) selected.push(ca);
+    });
+    payload[key] = selected.join(',');
+  });
+
+  const btn = document.getElementById('btn-submit-shift');
+  btn.disabled = true; btn.innerHTML = '<div class="spinner"></div>';
+
+  const res = await apiPost(payload);
+  btn.disabled = false; btn.innerHTML = 'Đăng ký ca';
+
+  if (res.success) {
+    showToast('Đăng ký ca thành công!');
+    loadShiftHistory();
+    loadShiftPage();
+  } else {
+    showToast(res.error || 'Lỗi', 'error');
+  }
+}
+
+function prevWeek() { currentWeekOffset--; loadShiftPage(); }
+function nextWeek() { currentWeekOffset++; loadShiftPage(); }
+
+// ── STORE ──
+let myStore = null;
+let storeTasksFull = [];
+
+async function loadMyStore() {
+  const el = document.getElementById('store-info-card');
+  const storeId = currentUser && currentUser.storeId;
+
+  if (!storeId) {
+    el.innerHTML = `<div class="card">
+      <div class="empty-state">
+        <div class="icon">◈</div>
+        <p>Bạn chưa được gán vào store nào</p>
+        <p style="font-size:11px;margin-top:6px">Liên hệ admin để được phân công</p>
+      </div>
+    </div>`;
+    return;
+  }
+
+  try {
+    const res = await api({ action: 'getStores' });
+    if (!res.success) return;
+
+    const store = res.data.find(s => s.id === storeId);
+    if (!store) {
+      el.innerHTML = `<div class="card"><div class="empty-state"><div class="icon">◈</div><p>Không tìm thấy thông tin store</p></div></div>`;
+      return;
+    }
+    myStore = store;
+
+    const platformColor = { etsy: '#f1641e', shopify: '#96bf48', amazon: '#ff9900', other: '#8b90a0' };
+    const pColor = platformColor[store.platform] || '#8b90a0';
+
+    el.innerHTML = `
+      <div class="card" style="border-color:var(--border2)">
+        <div style="display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap">
+          <div style="width:52px;height:52px;border-radius:12px;background:${pColor}22;border:1px solid ${pColor}44;
+            display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">
+            ${{ etsy: '🛍', shopify: '🏪', amazon: '📦', other: '🔗' }[store.platform] || '🔗'}
+          </div>
+          <div style="flex:1">
+            <div style="font-size:18px;font-weight:600;margin-bottom:6px">${store.name}</div>
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
+              <span class="badge" style="background:${pColor}22;color:${pColor};text-transform:uppercase">${store.platform}</span>
+              ${store.status === 'active'
+                ? '<span class="badge badge-green">Đang hoạt động</span>'
+                : '<span class="badge badge-red">Ngừng hoạt động</span>'}
+            </div>
+            ${store.url ? `<a href="${store.url}" target="_blank" style="font-size:12px;color:var(--accent);word-break:break-all">${store.url}</a>` : ''}
+            ${store.note ? `<div style="font-size:12px;color:var(--text3);margin-top:8px">${store.note}</div>` : ''}
+          </div>
+        </div>
+      </div>`;
+
+    // Load tasks for this store
+    loadStoreTasks(storeId);
+  } catch(e) {
+    el.innerHTML = `<div class="card"><div class="empty-state"><div class="icon">◈</div><p>Lỗi tải dữ liệu store</p></div></div>`;
+  }
+}
+
+async function loadStoreTasks(storeId) {
+  const card = document.getElementById('store-tasks-card');
+  const el = document.getElementById('store-task-list');
+  card.style.display = 'block';
+  el.innerHTML = '<div style="text-align:center;padding:20px"><div class="spinner"></div></div>';
+
+  try {
+    const res = await api({ action: 'getTasks' });
+    if (!res.success) return;
+    storeTasksFull = res.data.filter(t => t.storeId === storeId);
+    renderStoreTasks(storeTasksFull);
+  } catch(e) {
+    el.innerHTML = '<div class="empty-state"><p style="color:var(--red)">Lỗi tải task</p></div>';
+  }
+}
+
+function filterStoreTasks(status, btn) {
+  document.querySelectorAll('.store-task-filter').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  const list = status === 'all' ? storeTasksFull : storeTasksFull.filter(t => t.status === status);
+  renderStoreTasks(list);
+}
+
+function renderStoreTasks(list) {
+  const el = document.getElementById('store-task-list');
+  if (!list.length) {
+    el.innerHTML = '<div class="empty-state" style="padding:28px"><div class="icon">◧</div><p>Không có task nào</p></div>';
+    return;
+  }
+
+  // Summary row
+  const total = list.length;
+  const done = list.filter(t => t.status === 'done').length;
+  const inprog = list.filter(t => t.status === 'in_progress').length;
+  const pct = Math.round(done / total * 100);
+
+  el.innerHTML = `
+    <div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+      <div style="flex:1;min-width:160px;background:var(--bg3);border-radius:8px;padding:12px 14px">
+        <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:4px">Tiến độ</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="flex:1;height:6px;background:var(--bg4);border-radius:3px;overflow:hidden">
+            <div style="width:${pct}%;height:100%;background:var(--green);border-radius:3px;transition:width .3s"></div>
+          </div>
+          <span style="font-family:'DM Mono',monospace;font-size:13px;color:var(--green);font-weight:500">${pct}%</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <div style="background:var(--bg3);border-radius:8px;padding:10px 14px;text-align:center">
+          <div style="font-size:18px;font-weight:600;font-family:'DM Mono',monospace;color:var(--text)">${total}</div>
+          <div style="font-size:10px;color:var(--text3)">Tổng</div>
+        </div>
+        <div style="background:var(--bg3);border-radius:8px;padding:10px 14px;text-align:center">
+          <div style="font-size:18px;font-weight:600;font-family:'DM Mono',monospace;color:var(--accent)">${inprog}</div>
+          <div style="font-size:10px;color:var(--text3)">Đang làm</div>
+        </div>
+        <div style="background:var(--bg3);border-radius:8px;padding:10px 14px;text-align:center">
+          <div style="font-size:18px;font-weight:600;font-family:'DM Mono',monospace;color:var(--green)">${done}</div>
+          <div style="font-size:10px;color:var(--text3)">Hoàn thành</div>
+        </div>
+      </div>
+    </div>
+    ${list.map(t => `
+      <div class="task-card">
+        <div class="task-header">
+          <div>
+            <div class="task-title">${t.title}</div>
+            ${t.description ? `<div style="font-size:12px;color:var(--text3);margin-top:3px">${t.description.substring(0,100)}${t.description.length>100?'...':''}</div>` : ''}
+            <div class="task-meta" style="margin-top:8px">
+              ${t.dueDate ? `<span>📅 Hạn: ${fmtDate(t.dueDate)}</span>` : ''}
+              <span>${priorityBadge(t.priority)}</span>
+              <span>${statusBadge(t.status)}</span>
+            </div>
+          </div>
+          <div class="task-actions">
+            ${t.status !== 'done' ? `
+              <select class="form-select" style="padding:5px 8px;font-size:12px;width:130px" onchange="updateTaskStatus('${t.id}',this.value);loadStoreTasks('${t.storeId}')">
+                <option value="pending" ${t.status==='pending'?'selected':''}>Chờ xử lý</option>
+                <option value="in_progress" ${t.status==='in_progress'?'selected':''}>Đang làm</option>
+                <option value="done">Hoàn thành</option>
+              </select>
+            ` : ''}
+          </div>
+        </div>
+      </div>
+    `).join('')}
+  `;
+}
+
+async function loadShiftHistory() {
+  const tb = document.getElementById('shift-history-body');
+  try {
+    const res = await api({ action: 'getShifts' });
+    if (!res.success || !res.data.length) {
+      tb.innerHTML = '<tr><td colspan="9"><div class="empty-state" style="padding:24px"><p>Chưa có đăng ký ca nào</p></div></td></tr>';
+      return;
+    }
+    const list = res.data.sort((a,b) => b.week.localeCompare(a.week));
+    const caLabel = v => {
+      if (!v) return '<span style="color:var(--text3)">—</span>';
+      return v.split(',').filter(Boolean).map(ca => {
+        const cls = ca; const lbl = {sang:'S',chieu:'C',toi:'T'}[ca] || ca;
+        return `<span class="badge badge-${ca==='sang'?'amber':ca==='chieu'?'blue':'gray'}" style="font-size:10px;padding:2px 5px">${lbl}</span>`;
+      }).join(' ');
+    };
+    tb.innerHTML = list.map(s => `<tr>
+      <td style="font-family:'DM Mono',monospace;font-size:12px">${s.week}</td>
+      ${DAY_KEYS.map(k => `<td>${caLabel(s[k])}</td>`).join('')}
+      <td>${statusBadge(s.status)}</td>
+    </tr>`).join('');
+  } catch(e) {
+    tb.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--red)">Lỗi tải dữ liệu</td></tr>';
+  }
+}
+</script>
+</body>
+</html>
