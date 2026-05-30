@@ -845,32 +845,25 @@ async function doLogWork() {
   const checkInDate  = new Date(todayBase); checkInDate.setHours(ciH, ciM, 0, 0);
   const checkOutDate = new Date(todayBase); checkOutDate.setHours(coH, coM, 0, 0);
 
-  const note = `[Mô tả] ${desc}`;
-
-  // Bước 1: checkIn
-  const resIn = await apiPost({ action: 'checkIn', checkInTime: checkInDate.toISOString(), note });
-
-  // Nếu lỗi mà không phải "đã check-in rồi" thì dừng
-  if (!resIn.success && !(resIn.error || '').toLowerCase().includes('already')) {
-    btn.disabled = false; btn.innerHTML = '✓ Lưu';
-    return showToast(resIn.error || 'Lỗi check-in', 'error');
-  }
-
-  // Bước 2: checkOut
-  const resOut = await apiPost({ action: 'checkOut', checkOutTime: checkOutDate.toISOString(), note });
+  // Gọi 1 lần duy nhất — action logWork xử lý cả tạo mới lẫn update
+  const res = await apiPost({
+    action: 'logWork',
+    checkInTime:  checkInDate.toISOString(),
+    checkOutTime: checkOutDate.toISOString(),
+    note: `[Mô tả] ${desc}`
+  });
 
   btn.disabled = false; btn.innerHTML = '✓ Lưu';
 
-  if (resOut.success) {
+  if (res.success) {
     showToast('Đã lưu chấm công!');
     document.getElementById('log-desc').value = '';
-    // Đóng form
     logFormOpen = true; // trick để toggle đóng
     toggleLogForm();
     loadTodayStatus();
     loadAttendance();
   } else {
-    showToast(resOut.error || 'Lỗi check-out', 'error');
+    showToast(res.error || 'Lỗi khi lưu chấm công', 'error');
   }
 }
 
