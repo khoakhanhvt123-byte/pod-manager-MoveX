@@ -1125,74 +1125,75 @@ async function loadMyStore() {
   el.innerHTML = '<div style="text-align:center;padding:32px"><div class="spinner"></div></div>';
 
   try {
-    // FIX: Fetch tất cả stores rồi tìm store có managedBy === currentUser.id
-    // Không dùng currentUser.storeId vì có thể bị stale (lưu từ lúc login, admin gán sau thì không cập nhật)
     const res = await api({ action: 'getStores' });
     if (!res.success) {
       el.innerHTML = `<div class="card"><div class="empty-state"><div class="icon">◈</div><p>Lỗi tải dữ liệu store</p></div></div>`;
       return;
     }
 
-    // Tìm store được gán cho user này qua managedBy
-    const store = res.data.find(s =>
+    // FIX: dùng filter() thay vì find() để lấy TẤT CẢ stores của nhân viên
+    const stores = res.data.filter(s =>
       String(s.managedBy).trim() === String(currentUser.id).trim()
       && s.status !== 'inactive'
     );
 
-    if (!store) {
+    if (!stores.length) {
       el.innerHTML = `<div class="card"><div class="empty-state">
         <div class="icon">◈</div>
         <p>Bạn chưa được gán vào store nào</p>
         <p style="font-size:11px;margin-top:6px">Liên hệ admin để được phân công</p>
       </div></div>`;
-      // Ẩn store tasks card
       document.getElementById('store-tasks-card').style.display = 'none';
       return;
     }
 
-    // Cập nhật storeId vào local để các phần khác dùng được
-    currentUser.storeId = store.id;
-    localStorage.setItem('pod_user_emp', JSON.stringify(currentUser));
-
-    const pColor = {etsy:'#f1641e',shopify:'#96bf48',amazon:'#ff9900',other:'#8b90a0'}[store.platform] || '#8b90a0';
-    const storeIcon = {etsy:'🛍',shopify:'🏪',amazon:'📦',other:'🔗'}[store.platform] || '🔗';
-    const storeStatusLabel = {live:'🟢 Live', pause:'🟡 Pause', die:'🔴 Die'}[store.storeStatus] || store.storeStatus;
-    const storeStatusCls = {live:'badge-green', pause:'badge-amber', die:'badge-red'}[store.storeStatus] || 'badge-gray';
-
-    el.innerHTML = `
-      <div class="card" style="border-color:var(--border2)">
-        <div style="display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap">
-          <div style="width:52px;height:52px;border-radius:12px;background:${pColor}22;border:1px solid ${pColor}44;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">
-            ${storeIcon}
-          </div>
-          <div style="flex:1">
-            <div style="font-size:18px;font-weight:600;margin-bottom:6px">${store.name}</div>
-            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
-              <span class="badge" style="background:${pColor}22;color:${pColor};text-transform:uppercase">${store.platform}</span>
-              <span class="badge ${storeStatusCls}">${storeStatusLabel}</span>
+    // Render tất cả stores
+    el.innerHTML = stores.map(store => {
+      const pColor = {etsy:'#f1641e',shopify:'#96bf48',amazon:'#ff9900',other:'#8b90a0'}[store.platform] || '#8b90a0';
+      const storeIcon = {etsy:'🛍',shopify:'🏪',amazon:'📦',other:'🔗'}[store.platform] || '🔗';
+      const storeStatusLabel = {live:'🟢 Live', pause:'🟡 Pause', die:'🔴 Die'}[store.storeStatus] || store.storeStatus;
+      const storeStatusCls = {live:'badge-green', pause:'badge-amber', die:'badge-red'}[store.storeStatus] || 'badge-gray';
+      return `
+        <div class="card" style="border-color:var(--border2);margin-bottom:12px">
+          <div style="display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap">
+            <div style="width:52px;height:52px;border-radius:12px;background:${pColor}22;border:1px solid ${pColor}44;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">
+              ${storeIcon}
             </div>
-            ${store.url ? `<a href="${store.url}" target="_blank" style="font-size:12px;color:var(--accent);word-break:break-all">${store.url}</a>` : ''}
-            ${store.note ? `<div style="font-size:12px;color:var(--text3);margin-top:8px">${store.note}</div>` : ''}
+            <div style="flex:1">
+              <div style="font-size:18px;font-weight:600;margin-bottom:6px">${store.name}</div>
+              <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
+                <span class="badge" style="background:${pColor}22;color:${pColor};text-transform:uppercase">${store.platform}</span>
+                <span class="badge ${storeStatusCls}">${storeStatusLabel}</span>
+              </div>
+              ${store.url ? `<a href="${store.url}" target="_blank" style="font-size:12px;color:var(--accent);word-break:break-all">${store.url}</a>` : ''}
+              ${store.note ? `<div style="font-size:12px;color:var(--text3);margin-top:8px">${store.note}</div>` : ''}
+            </div>
           </div>
-        </div>
-      </div>`;
+        </div>`;
+    }).join('');
 
-    loadStoreTasks(store.id);
+    // Load tasks của tất cả stores
+    const allStoreIds = stores.map(s => s.id);
+    loadStoreTasks(allStoreIds);
   } catch(e) {
     el.innerHTML = `<div class="card"><div class="empty-state"><div class="icon">◈</div><p>Lỗi tải dữ liệu store</p></div></div>`;
   }
 }
 
-async function loadStoreTasks(storeId) {
+// storeIds: string hoặc array
+async function loadStoreTasks(storeIds) {
   const card = document.getElementById('store-tasks-card');
   const el   = document.getElementById('store-task-list');
   card.style.display = 'block';
   el.innerHTML = '<div style="text-align:center;padding:20px"><div class="spinner"></div></div>';
 
+  // Chuẩn hóa thành array
+  const ids = Array.isArray(storeIds) ? storeIds : [storeIds];
+
   try {
     const res = await api({ action: 'getTasks' });
     if (!res.success) return;
-    storeTasksFull = res.data.filter(t => t.storeId === storeId);
+    storeTasksFull = res.data.filter(t => ids.includes(t.storeId));
     renderStoreTasks(storeTasksFull);
   } catch(e) {
     el.innerHTML = '<div class="empty-state"><p style="color:var(--red)">Lỗi tải task</p></div>';
@@ -1246,7 +1247,7 @@ function renderStoreTasks(list) {
           </div>
           <div class="task-actions">
             ${t.status!=='done'?`
-              <select class="form-select" style="padding:5px 8px;font-size:12px;width:130px" onchange="updateTaskStatus('${t.id}',this.value);loadStoreTasks('${t.storeId}')">
+              <select class="form-select" style="padding:5px 8px;font-size:12px;width:130px" onchange="updateTaskStatus('${t.id}',this.value);loadMyStore()">
                 <option value="pending" ${t.status==='pending'?'selected':''}>Chờ xử lý</option>
                 <option value="in_progress" ${t.status==='in_progress'?'selected':''}>Đang làm</option>
                 <option value="done">Hoàn thành</option>
