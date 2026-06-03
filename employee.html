@@ -217,9 +217,17 @@ body {
 }
 .log-form-grid {
   display: grid;
-  grid-template-columns: 160px 160px 1fr auto;
+  grid-template-columns: 150px 130px 130px 1fr auto;
   gap: 12px;
   align-items: end;
+}
+@media (max-width: 700px) {
+  .log-form-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .log-form-grid .log-field-desc { grid-column: 1 / -1; }
+  .log-form-grid .log-submit-wrap { grid-column: 1 / -1; }
+  .log-submit-btn { width: 100%; justify-content: center; }
 }
 .log-field label {
   display: block;
@@ -406,7 +414,24 @@ tr:hover td { background: var(--bg3); }
 .shift-cb.selected.chieu .shift-cb-tag { border-color: var(--accent); background: rgba(91,141,246,0.2); }
 .shift-cb.selected.toi .shift-cb-tag { border-color: var(--pink); background: rgba(232,121,160,0.2); }
 
-/* ── EMPTY STATE ── */
+/* ── PAST LOG LABEL ── */
+.past-tag {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: rgba(245,166,35,0.12); color: var(--amber);
+  border: 1px solid rgba(245,166,35,0.25);
+  border-radius: 5px; font-size: 10px; font-weight: 600;
+  padding: 2px 7px; letter-spacing: 0.04em; margin-left: 6px;
+  vertical-align: middle;
+}
+
+/* ── TABLE delete btn ── */
+.att-del-btn {
+  background: none; border: none; cursor: pointer;
+  color: var(--text3); font-size: 14px; padding: 4px 6px;
+  border-radius: 5px; transition: all 0.15s;
+  font-family: inherit;
+}
+.att-del-btn:hover { background: rgba(240,82,82,0.12); color: var(--red); }
 .empty-state { text-align: center; padding: 40px 20px; color: var(--text3); }
 .empty-state .icon { font-size: 32px; margin-bottom: 10px; }
 .empty-state p { font-size: 13px; }
@@ -567,6 +592,10 @@ tr:hover td { background: var(--bg3); }
           <div class="log-form-inner">
             <div class="log-form-grid">
               <div class="log-field">
+                <label>Ngày</label>
+                <input type="date" id="log-date" onchange="checkPastNotice()">
+              </div>
+              <div class="log-field">
                 <label>Giờ vào</label>
                 <input type="time" id="log-checkin">
               </div>
@@ -574,15 +603,18 @@ tr:hover td { background: var(--bg3); }
                 <label>Giờ ra</label>
                 <input type="time" id="log-checkout">
               </div>
-              <div class="log-field">
+              <div class="log-field log-field-desc">
                 <label>Mô tả công việc</label>
                 <textarea id="log-desc" placeholder="Hôm nay bạn đã làm gì?..."></textarea>
               </div>
-              <div>
+              <div class="log-submit-wrap">
                 <button class="log-submit-btn" id="log-submit-btn" onclick="doLogWork()">
                   ✓ Lưu
                 </button>
               </div>
+            </div>
+            <div id="log-past-notice" style="display:none;margin-top:10px;font-size:12px;color:var(--amber)">
+              ⚠ Đang chấm công cho ngày trong quá khứ
             </div>
           </div>
         </div>
@@ -623,15 +655,17 @@ tr:hover td { background: var(--bg3); }
             <thead>
               <tr>
                 <th>Ngày</th>
+                <th>Ca</th>
                 <th>Check-in</th>
                 <th>Check-out</th>
                 <th>Giờ làm</th>
                 <th>Trạng thái</th>
                 <th>Mô tả</th>
+                <th></th>
               </tr>
             </thead>
             <tbody id="att-table-body">
-              <tr><td colspan="6" style="text-align:center;padding:28px"><div class="spinner"></div></td></tr>
+              <tr><td colspan="8" style="text-align:center;padding:28px"><div class="spinner"></div></td></tr>
             </tbody>
           </table>
         </div>
@@ -951,41 +985,61 @@ function toggleLogForm() {
   if (logFormOpen) {
     wrap.classList.add('open');
     btn.textContent = '✕ Đóng';
-    const now = new Date().toTimeString().slice(0, 5);
-    document.getElementById('log-checkin').value = now;
-    document.getElementById('log-checkout').value = now;
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    const timeStr  = now.toTimeString().slice(0, 5);
+    document.getElementById('log-date').value     = todayStr;
+    document.getElementById('log-date').max       = todayStr; // không cho chọn tương lai
+    document.getElementById('log-checkin').value  = timeStr;
+    document.getElementById('log-checkout').value = timeStr;
+    checkPastNotice();
     document.getElementById('log-desc').focus();
   } else {
     wrap.classList.remove('open');
-    btn.textContent = '+ Chấm công hôm nay';
+    btn.textContent = '+ Chấm công';
+    document.getElementById('log-past-notice').style.display = 'none';
   }
+}
+
+function checkPastNotice() {
+  const dateVal = document.getElementById('log-date').value;
+  const todayStr = new Date().toISOString().split('T')[0];
+  const notice = document.getElementById('log-past-notice');
+  if (notice) notice.style.display = (dateVal && dateVal < todayStr) ? 'block' : 'none';
 }
 
 // ── DO LOG WORK ──
 async function doLogWork() {
-  const ciVal = document.getElementById('log-checkin').value;
-  const coVal = document.getElementById('log-checkout').value;
-  const desc  = document.getElementById('log-desc').value.trim();
+  const dateVal = document.getElementById('log-date').value;
+  const ciVal   = document.getElementById('log-checkin').value;
+  const coVal   = document.getElementById('log-checkout').value;
+  const desc    = document.getElementById('log-desc').value.trim();
 
-  if (!ciVal || !coVal) return showToast('Điền đủ giờ vào và giờ ra', 'error');
-  if (!desc)            return showToast('Điền mô tả công việc hôm nay', 'error');
-  if (ciVal >= coVal)   return showToast('Giờ ra phải sau giờ vào', 'error');
+  if (!dateVal)          return showToast('Chọn ngày chấm công', 'error');
+  if (!ciVal || !coVal)  return showToast('Điền đủ giờ vào và giờ ra', 'error');
+  if (!desc)             return showToast('Điền mô tả công việc', 'error');
+  if (ciVal >= coVal)    return showToast('Giờ ra phải sau giờ vào', 'error');
+
+  // Không cho chọn ngày tương lai
+  const todayStr = new Date().toISOString().split('T')[0];
+  if (dateVal > todayStr) return showToast('Không thể chấm công cho ngày tương lai', 'error');
 
   const btn = document.getElementById('log-submit-btn');
   btn.disabled = true;
   btn.innerHTML = '<div class="spinner"></div>';
 
-  const todayBase = new Date();
-  const [ciH, ciM] = ciVal.split(':').map(Number);
-  const [coH, coM] = coVal.split(':').map(Number);
-  const checkInDate  = new Date(todayBase); checkInDate.setHours(ciH, ciM, 0, 0);
-  const checkOutDate = new Date(todayBase); checkOutDate.setHours(coH, coM, 0, 0);
+  // Ghép date + time thành ISO (dùng múi giờ local)
+  const checkInDate  = new Date(`${dateVal}T${ciVal}:00`);
+  const checkOutDate = new Date(`${dateVal}T${coVal}:00`);
+
+  const isPast = dateVal < todayStr;
+  const notePrefix = isPast ? '[Quá khứ] ' : '[Mô tả] ';
 
   const res = await apiPost({
     action: 'logWork',
     checkInTime:  checkInDate.toISOString(),
     checkOutTime: checkOutDate.toISOString(),
-    note: `[Mô tả] ${desc}`
+    note: `${notePrefix}${desc}`
   });
 
   btn.disabled = false; btn.innerHTML = '✓ Lưu';
@@ -993,8 +1047,11 @@ async function doLogWork() {
   if (res.success) {
     cacheClear('{"action":"getTodayAttendance"');
     cacheClear('{"action":"getAttendance"');
-    showToast('Đã lưu chấm công!');
+    showToast(isPast ? `Đã lưu chấm công ngày ${dateVal}!` : 'Đã lưu chấm công!');
     document.getElementById('log-desc').value = '';
+    // Reset về hôm nay sau khi lưu
+    document.getElementById('log-date').value = todayStr;
+    document.getElementById('log-past-notice').style.display = 'none';
     logFormOpen = true;
     toggleLogForm();
     loadTodayStatus();
@@ -1009,29 +1066,43 @@ async function loadTodayStatus() {
   try {
     const res = await api({ action: 'getTodayAttendance' }, 15000);
     if (!res.success) return;
-    const today = res.data.find(r => String(r.userId) === String(currentUser.id));
+
+    // Tất cả record hôm nay của user hiện tại
+    const myRecords = res.data.filter(r => String(r.userId) === String(currentUser?.id));
 
     const stateEl = document.getElementById('checkin-state-text');
     const metaEl  = document.getElementById('checkin-meta-text');
     const btn     = document.getElementById('btn-cham-cong');
 
-    if (!today) {
+    if (!myRecords.length) {
       stateEl.textContent = 'Chưa chấm công';
       stateEl.className = 'checkin-state not-in';
       metaEl.textContent = '—';
-      if (!logFormOpen) btn.textContent = '+ Chấm công hôm nay';
-    } else if (today.status === 'done') {
-      const hrs = calcHours(today.checkIn, today.checkOut);
-      stateEl.textContent = 'Đã chấm công';
-      stateEl.className = 'checkin-state done';
-      metaEl.textContent = `${fmtTime(today.checkIn)} → ${fmtTime(today.checkOut)}${hrs ? '  (' + hrs.toFixed(1) + 'h)' : ''}`;
-      if (!logFormOpen) btn.textContent = '✎ Cập nhật lại';
-    } else if (today.status === 'working') {
+      if (!logFormOpen) btn.textContent = '+ Chấm công';
+      return;
+    }
+
+    // Tính tổng giờ hôm nay
+    let totalHrs = 0;
+    myRecords.forEach(r => {
+      const h = calcHours(r.checkIn, r.checkOut);
+      if (h) totalHrs += h;
+    });
+
+    const latest  = myRecords[myRecords.length - 1];
+    const count   = myRecords.length;
+    const hasWorking = myRecords.some(r => r.status === 'working');
+
+    if (hasWorking) {
       stateEl.textContent = 'Đang làm việc';
       stateEl.className = 'checkin-state working';
-      metaEl.textContent = `Check-in lúc ${fmtTime(today.checkIn)}`;
-      if (!logFormOpen) btn.textContent = '✎ Cập nhật lại';
+      metaEl.textContent = `${count} ca hôm nay · ${totalHrs.toFixed(1)}h tổng`;
+    } else {
+      stateEl.textContent = 'Đã chấm công';
+      stateEl.className = 'checkin-state done';
+      metaEl.textContent = `${count} ca hôm nay · ${totalHrs.toFixed(1)}h tổng`;
     }
+    if (!logFormOpen) btn.textContent = '+ Thêm ca';
   } catch(e) {}
 }
 
@@ -1040,42 +1111,75 @@ async function loadAttendance() {
   const startDate = document.getElementById('att-from').value;
   const endDate   = document.getElementById('att-to').value;
   const tb = document.getElementById('att-table-body');
-  tb.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px"><div class="spinner"></div></td></tr>';
+  tb.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px"><div class="spinner"></div></td></tr>';
 
   try {
     const res = await api({ action: 'getAttendance', startDate, endDate });
     if (!res.success) return;
 
-    const list = res.data.sort((a, b) => b.date.localeCompare(a.date));
+    const list = res.data.sort((a, b) => {
+      if (b.date !== a.date) return b.date.localeCompare(a.date);
+      return (Number(a.session) || 1) - (Number(b.session) || 1);
+    });
 
-    let totalHours = 0, workDays = 0;
+    // Stats: tính theo unique ngày có ít nhất 1 record
+    let totalHours = 0;
+    const dayMap = {};
     list.forEach(r => {
       const h = calcHours(r.checkIn, r.checkOut);
-      if (h) { totalHours += h; workDays++; }
+      if (h) {
+        totalHours += h;
+        dayMap[r.date] = (dayMap[r.date] || 0) + h;
+      }
     });
+    const workDays = Object.keys(dayMap).length;
     document.getElementById('stat-total-hours').textContent = totalHours.toFixed(1) + 'h';
     document.getElementById('stat-total-days').textContent  = workDays + ' ngày';
     document.getElementById('stat-avg-hours').textContent   = workDays > 0 ? (totalHours / workDays).toFixed(1) + 'h' : '—';
 
     if (!list.length) {
-      tb.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="icon">◷</div><p>Không có dữ liệu trong khoảng thời gian này</p></div></td></tr>';
+      tb.innerHTML = '<tr><td colspan="8"><div class="empty-state"><div class="icon">◷</div><p>Không có dữ liệu trong khoảng thời gian này</p></div></td></tr>';
       return;
     }
 
+    const todayStr = new Date().toISOString().split('T')[0];
+
     tb.innerHTML = list.map(r => {
       const hrs = calcHours(r.checkIn, r.checkOut);
-      const noteText = (r.note || '').replace('[Mô tả] ', '').replace('[Kế hoạch] ', '').replace('[Tổng kết] ', '');
+      const noteText = (r.note || '')
+        .replace('[Mô tả] ', '').replace('[Kế hoạch] ', '')
+        .replace('[Tổng kết] ', '').replace('[Quá khứ] ', '');
+      const isPast = r.date < todayStr;
+      const pastTag = isPast ? `<span class="past-tag">quá khứ</span>` : '';
+      const sessionLabel = r.session ? `Ca ${r.session}` : 'Ca 1';
       return `<tr>
-        <td style="font-family:'DM Mono',monospace;font-size:12px">${r.date}</td>
+        <td style="font-family:'DM Mono',monospace;font-size:12px">${r.date}${pastTag}</td>
+        <td style="font-size:12px;color:var(--text3)">${sessionLabel}</td>
         <td style="font-family:'DM Mono',monospace;color:var(--green)">${fmtTime(r.checkIn)}</td>
         <td style="font-family:'DM Mono',monospace;color:var(--text2)">${fmtTime(r.checkOut)}</td>
         <td class="hours-highlight">${hrs ? hrs.toFixed(1) + 'h' : '—'}</td>
         <td>${statusBadge(r.status === 'done' ? 'done' : r.status)}</td>
-        <td style="font-size:12px;color:var(--text3);max-width:200px">${noteText || '—'}</td>
+        <td style="font-size:12px;color:var(--text3);max-width:180px">${noteText || '—'}</td>
+        <td><button class="att-del-btn" onclick="deleteMyAttendance('${r.id}')" title="Xóa ca này">✕</button></td>
       </tr>`;
     }).join('');
   } catch(e) {
-    tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--red)">Lỗi tải dữ liệu</td></tr>';
+    tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--red)">Lỗi tải dữ liệu</td></tr>';
+  }
+}
+
+// ── DELETE MY ATTENDANCE (nhân viên tự xóa ca của mình) ──
+async function deleteMyAttendance(recordId) {
+  if (!confirm('Xóa ca chấm công này?')) return;
+  const res = await apiPost({ action: 'deleteAttendance', recordId });
+  if (res.success) {
+    cacheClear('{"action":"getTodayAttendance"');
+    cacheClear('{"action":"getAttendance"');
+    showToast('Đã xóa ca chấm công');
+    loadTodayStatus();
+    loadAttendance();
+  } else {
+    showToast(res.error || 'Lỗi khi xóa', 'error');
   }
 }
 
