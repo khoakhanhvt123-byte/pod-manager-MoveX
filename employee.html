@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>POD Manager — Nhân viên</title>
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#5b8df6">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="POD Manager">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -110,6 +117,51 @@ body {
 .nav-tab:hover { background: var(--bg3); color: var(--text); }
 .nav-tab.active { background: rgba(91,141,246,0.15); color: var(--accent); font-weight: 500; }
 .nav-tab .icon { font-size: 15px; }
+
+/* ── OFFLINE BANNER ── */
+#offline-banner {
+  display: none;
+  background: rgba(245,166,35,0.15);
+  border-bottom: 1px solid rgba(245,166,35,0.3);
+  color: var(--amber);
+  text-align: center;
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 500;
+}
+#offline-banner.show { display: block; }
+
+/* ── LEAVE REQUEST STYLES ── */
+.leave-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 16px; margin-bottom: 12px;
+}
+.leave-status-pending { border-left: 3px solid var(--amber); }
+.leave-status-approved { border-left: 3px solid var(--green); }
+.leave-status-rejected { border-left: 3px solid var(--red); }
+
+.leave-type-select {
+  width: 100%; background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); font-family: 'Sora', sans-serif;
+  font-size: 13.5px; padding: 9px 12px; outline: none;
+  transition: border-color 0.15s;
+}
+.leave-type-select:focus { border-color: var(--accent); }
+
+/* Install prompt */
+#install-prompt {
+  display: none;
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  background: var(--bg2); border: 1px solid var(--accent);
+  border-radius: 12px; padding: 14px 20px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  z-index: 999; text-align: center;
+  width: calc(100% - 48px); max-width: 400px;
+}
+#install-prompt.show { display: block; }
+.install-prompt-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+.install-prompt-sub { font-size: 12px; color: var(--text3); margin-bottom: 12px; }
+.install-prompt-actions { display: flex; gap: 8px; justify-content: center; }
 
 /* ── CONTENT ── */
 .content { padding: 24px; max-width: 900px; margin: 0 auto; }
@@ -440,6 +492,9 @@ tr:hover td { background: var(--bg3); }
   </div>
 </div>
 
+<!-- OFFLINE BANNER -->
+<div id="offline-banner">📡 Không có kết nối mạng — dữ liệu có thể chưa cập nhật</div>
+
 <!-- APP -->
 <div id="app">
 
@@ -472,7 +527,21 @@ tr:hover td { background: var(--bg3); }
     <button class="nav-tab" onclick="showPage('store')" id="nav-store">
       <span class="icon">◈</span> Store của tôi
     </button>
+    <button class="nav-tab" onclick="showPage('leaves')" id="nav-leaves" style="position:relative">
+      <span class="icon">🏖</span> Nghỉ phép
+      <span id="leave-notif-dot" style="display:none;position:absolute;top:6px;right:6px;width:7px;height:7px;background:var(--red);border-radius:50%"></span>
+    </button>
   </div>
+
+<!-- INSTALL PROMPT (PWA) -->
+<div id="install-prompt">
+  <div class="install-prompt-title">📱 Cài app POD Manager</div>
+  <div class="install-prompt-sub">Thêm vào màn hình chính để truy cập nhanh</div>
+  <div class="install-prompt-actions">
+    <button class="btn btn-ghost btn-sm" onclick="document.getElementById('install-prompt').classList.remove('show')">Để sau</button>
+    <button class="btn btn-primary btn-sm" id="btn-install-pwa">Cài ngay</button>
+  </div>
+</div>
 
   <!-- PAGE: CHẤM CÔNG -->
   <div class="page active" id="page-checkin">
@@ -645,6 +714,49 @@ tr:hover td { background: var(--bg3); }
     </div>
   </div>
 
+  <!-- PAGE: NGHỈ PHÉP -->
+  <div class="page" id="page-leaves">
+    <div class="content">
+      <!-- Form xin nghỉ -->
+      <div class="card" style="margin-bottom:16px">
+        <div style="font-size:14px;font-weight:600;margin-bottom:16px">📝 Gửi đơn xin nghỉ</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+          <div>
+            <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:6px">Loại nghỉ</label>
+            <select class="leave-type-select" id="leave-type">
+              <option value="phep_nam">🌴 Phép năm</option>
+              <option value="benh">🤒 Nghỉ bệnh</option>
+              <option value="khong_luong">💸 Không lương</option>
+            </select>
+          </div>
+          <div>
+            <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:6px">Từ ngày</label>
+            <input type="date" id="leave-start" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Sora',sans-serif;font-size:13.5px;padding:9px 12px;outline:none">
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+          <div>
+            <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:6px">Đến ngày</label>
+            <input type="date" id="leave-end" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Sora',sans-serif;font-size:13.5px;padding:9px 12px;outline:none">
+          </div>
+          <div>
+            <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:6px">Lý do</label>
+            <input type="text" id="leave-reason" placeholder="Nhập lý do nghỉ..." style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Sora',sans-serif;font-size:13.5px;padding:9px 12px;outline:none">
+          </div>
+        </div>
+        <button class="btn btn-primary" id="btn-submit-leave" onclick="submitLeave()">📤 Gửi đơn</button>
+      </div>
+
+      <!-- Lịch sử đơn nghỉ -->
+      <div class="card">
+        <div style="font-size:14px;font-weight:600;margin-bottom:16px">📋 Lịch sử nghỉ phép</div>
+        <div id="leave-history-list">
+          <div style="text-align:center;padding:24px"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div><!-- /app -->
 
 <!-- Toast -->
@@ -653,6 +765,21 @@ tr:hover td { background: var(--bg3); }
 <script>
 // ── CONFIG ──
 const API_URL = 'https://script.google.com/macros/s/AKfycbzr5ZZb6DFs-k2xYfB9k48XXf15qIhyfKmepBxg4LQ4Wly6mQ-KXmtDl7-O171fIkfH/exec';
+
+// ── CACHE (TTL-based, xóa khi có write) ──
+const _cache = new Map();
+function cacheGet(key) {
+  const entry = _cache.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expiry) { _cache.delete(key); return null; }
+  return entry.data;
+}
+function cacheSet(key, data, ttlMs = 60000) {
+  _cache.set(key, { data, expiry: Date.now() + ttlMs });
+}
+function cacheClear(prefix) {
+  _cache.forEach((_, k) => { if (k.startsWith(prefix)) _cache.delete(k); });
+}
 
 // ── STATE ──
 let token = localStorage.getItem('pod_token_emp');
@@ -683,12 +810,19 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ── API ──
-async function api(params) {
+async function api(params, ttlMs = 0) {
+  const cacheKey = JSON.stringify(params);
+  if (ttlMs > 0) {
+    const cached = cacheGet(cacheKey);
+    if (cached) return cached;
+  }
   const url = new URL(API_URL);
   Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
   if (token) url.searchParams.set('token', token);
   const res = await fetch(url.toString(), { redirect: 'follow' });
-  return res.json();
+  const data = await res.json();
+  if (ttlMs > 0 && data.success) cacheSet(cacheKey, data, ttlMs);
+  return data;
 }
 
 async function apiPost(params) {
@@ -747,22 +881,21 @@ function showApp() {
     document.getElementById('sidebar-username').textContent = currentUser.name || currentUser.username;
     document.getElementById('user-avatar-init').textContent = (currentUser.name || 'A')[0].toUpperCase();
   }
-  loadTodayStatus();
-  loadAttendance();
-  loadTasks();
-  loadShiftPage();
-  loadShiftHistory();
-  loadMyStore();
+  // Tab active (Chấm công): load song song
+  Promise.all([loadTodayStatus(), loadAttendance(), loadTasks()]).catch(() => {});
+  // Tab ẩn: load sau, không block UI
+  setTimeout(() => { loadShiftPage(); loadShiftHistory(); }, 0);
+  setTimeout(() => { loadMyStore(); }, 0);
 }
 
 // ── NAVIGATION ──
 function showPage(page) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(n => n.classList.remove('active'));
-  document.getElementById('page-' + page).classList.add('active');
-  document.getElementById('nav-' + page).classList.add('active');
-  // Reload store mỗi lần vào tab để luôn có data mới nhất
-  if (page === 'store') loadMyStore();
+  document.getElementById('page-' + page)?.classList.add('active');
+  document.getElementById('nav-' + page)?.classList.add('active');
+  if (page === 'store' && !cacheGet('{"action":"getStores"}')) loadMyStore();
+  if (page === 'leaves') loadLeaveHistory();
 }
 
 // ── TOAST ──
@@ -858,6 +991,8 @@ async function doLogWork() {
   btn.disabled = false; btn.innerHTML = '✓ Lưu';
 
   if (res.success) {
+    cacheClear('{"action":"getTodayAttendance"');
+    cacheClear('{"action":"getAttendance"');
     showToast('Đã lưu chấm công!');
     document.getElementById('log-desc').value = '';
     logFormOpen = true;
@@ -872,7 +1007,7 @@ async function doLogWork() {
 // ── TODAY STATUS ──
 async function loadTodayStatus() {
   try {
-    const res = await api({ action: 'getTodayAttendance' });
+    const res = await api({ action: 'getTodayAttendance' }, 15000);
     if (!res.success) return;
     const today = res.data.find(r => String(r.userId) === String(currentUser.id));
 
@@ -947,7 +1082,7 @@ async function loadAttendance() {
 // ── TASKS ──
 async function loadTasks() {
   try {
-    const res = await api({ action: 'getTasks' });
+    const res = await api({ action: 'getTasks' }, 30000);
     if (res.success) { allTasksFull = res.data; filterTasks(currentTaskFilter); }
   } catch(e) {}
 }
@@ -995,8 +1130,10 @@ function renderTasks(list) {
 
 async function updateTaskStatus(taskId, status) {
   const res = await apiPost({ action: 'updateTask', taskId, status });
-  if (res.success) { showToast('Đã cập nhật trạng thái'); loadTasks(); }
-  else showToast(res.error, 'error');
+  if (res.success) {
+    cacheClear('{"action":"getTasks"');
+    showToast('Đã cập nhật trạng thái'); loadTasks();
+  } else showToast(res.error, 'error');
 }
 
 // ── SHIFT ──
@@ -1030,7 +1167,7 @@ function loadShiftPage() {
     weekStart.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }) + ' – ' +
     weekEnd.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-  api({ action: 'getShifts', week: weekStr }).then(res => {
+  api({ action: 'getShifts', week: weekStr }, 60000).then(res => {
     currentShiftData = (res.success && res.data.length > 0) ? res.data[0] : null;
     renderShiftGrid(weekStart, currentShiftData);
 
@@ -1086,8 +1223,10 @@ async function submitShift() {
   const res = await apiPost(payload);
   btn.disabled = false; btn.innerHTML = 'Đăng ký ca';
 
-  if (res.success) { showToast('Đăng ký ca thành công!'); loadShiftHistory(); loadShiftPage(); }
-  else showToast(res.error || 'Lỗi', 'error');
+  if (res.success) {
+    cacheClear('{"action":"getShifts"');
+    showToast('Đăng ký ca thành công!'); loadShiftHistory(); loadShiftPage();
+  } else showToast(res.error || 'Lỗi', 'error');
 }
 
 function prevWeek() { currentWeekOffset--; loadShiftPage(); }
@@ -1096,7 +1235,7 @@ function nextWeek() { currentWeekOffset++; loadShiftPage(); }
 async function loadShiftHistory() {
   const tb = document.getElementById('shift-history-body');
   try {
-    const res = await api({ action: 'getShifts' });
+    const res = await api({ action: 'getShifts' }, 60000);
     if (!res.success || !res.data.length) {
       tb.innerHTML = '<tr><td colspan="9"><div class="empty-state" style="padding:24px"><p>Chưa có đăng ký ca nào</p></div></td></tr>';
       return;
@@ -1125,7 +1264,7 @@ async function loadMyStore() {
   el.innerHTML = '<div style="text-align:center;padding:32px"><div class="spinner"></div></div>';
 
   try {
-    const res = await api({ action: 'getStores' });
+    const res = await api({ action: 'getStores' }, 60000);
     if (!res.success) {
       el.innerHTML = `<div class="card"><div class="empty-state"><div class="icon">◈</div><p>Lỗi tải dữ liệu store</p></div></div>`;
       return;
@@ -1191,7 +1330,7 @@ async function loadStoreTasks(storeIds) {
   const ids = Array.isArray(storeIds) ? storeIds : [storeIds];
 
   try {
-    const res = await api({ action: 'getTasks' });
+    const res = await api({ action: 'getTasks' }, 30000);
     if (!res.success) return;
     storeTasksFull = res.data.filter(t => ids.includes(t.storeId));
     renderStoreTasks(storeTasksFull);
@@ -1259,6 +1398,143 @@ function renderStoreTasks(list) {
     `).join('')}
   `;
 }
+</script>
+
+<script>
+// ══════════════════════════════════════════════════════
+// LEAVE REQUEST — Employee side
+// ══════════════════════════════════════════════════════
+
+// Set default dates for leave form
+document.addEventListener('DOMContentLoaded', () => {
+  const today = new Date().toISOString().split('T')[0];
+  const startEl = document.getElementById('leave-start');
+  const endEl = document.getElementById('leave-end');
+  if (startEl) startEl.value = today;
+  if (endEl) endEl.value = today;
+});
+
+async function submitLeave() {
+  const leaveType = document.getElementById('leave-type').value;
+  const startDate = document.getElementById('leave-start').value;
+  const endDate = document.getElementById('leave-end').value;
+  const reason = document.getElementById('leave-reason').value.trim();
+
+  if (!startDate) return showToast('Chọn ngày bắt đầu nghỉ', 'error');
+
+  const btn = document.getElementById('btn-submit-leave');
+  btn.disabled = true; btn.innerHTML = '<div class="spinner"></div> Đang gửi...';
+
+  const res = await apiPost({ action: 'requestLeave', leaveType, startDate, endDate, reason });
+  btn.disabled = false; btn.innerHTML = '📤 Gửi đơn';
+
+  if (res.success) {
+    showToast('Đã gửi đơn nghỉ phép!');
+    document.getElementById('leave-reason').value = '';
+    cacheClear('{"action":"getLeaves"');
+    loadLeaveHistory();
+    // Show dot on tab
+    const dot = document.getElementById('leave-notif-dot');
+    if (dot) dot.style.display = 'none'; // Just submitted, no pending to notify
+  } else {
+    showToast(res.error || 'Lỗi gửi đơn', 'error');
+  }
+}
+
+async function loadLeaveHistory() {
+  const el = document.getElementById('leave-history-list');
+  if (!el) return;
+  el.innerHTML = '<div style="text-align:center;padding:20px"><div class="spinner"></div></div>';
+  try {
+    const res = await api({ action: 'getLeaves' }, 30000);
+    if (!res.success || !res.data.length) {
+      el.innerHTML = '<div style="text-align:center;padding:28px;color:var(--text3)"><div style="font-size:28px;margin-bottom:8px">🏖</div><p>Chưa có đơn nghỉ phép nào</p></div>';
+      return;
+    }
+    const sorted = res.data.sort((a, b) => (b.createdAt||'').localeCompare(a.createdAt||''));
+    const typeLabel = { phep_nam:'🌴 Phép năm', benh:'🤒 Nghỉ bệnh', khong_luong:'💸 Không lương' };
+    const statusMap = {
+      pending: { cls:'badge-amber', label:'Chờ duyệt' },
+      approved: { cls:'badge-green', label:'Đã duyệt' },
+      rejected: { cls:'badge-red', label:'Từ chối' },
+    };
+    el.innerHTML = sorted.map(l => {
+      const st = statusMap[l.status] || { cls:'badge-gray', label:l.status };
+      const borderClr = l.status === 'approved' ? 'var(--green)' : l.status === 'rejected' ? 'var(--red)' : 'var(--amber)';
+      return `<div class="leave-card" style="border-left:3px solid ${borderClr}">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+          <div>
+            <div style="font-size:14px;font-weight:500;margin-bottom:4px">${typeLabel[l.leaveType]||l.leaveType}</div>
+            <div style="font-size:12px;color:var(--text3);font-family:'DM Mono',monospace">
+              ${fmtDate(l.startDate)}${l.endDate && l.endDate!==l.startDate ? ' → ' + fmtDate(l.endDate) : ''}
+            </div>
+            ${l.reason ? `<div style="font-size:12px;color:var(--text2);margin-top:6px">${l.reason}</div>` : ''}
+          </div>
+          <span class="badge ${st.cls}">${st.label}</span>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-top:8px;font-family:'DM Mono',monospace">Gửi lúc: ${(l.createdAt||'').slice(0,16).replace('T',' ')}</div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    el.innerHTML = '<div style="text-align:center;color:var(--red);padding:20px">Lỗi tải dữ liệu</div>';
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// PWA — Service Worker + Install Prompt
+// ══════════════════════════════════════════════════════
+
+let _deferredInstallPrompt = null;
+
+// Register service worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => console.log('SW registered:', reg.scope))
+      .catch(err => console.warn('SW registration failed:', err));
+  });
+}
+
+// Intercept browser install prompt
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  _deferredInstallPrompt = e;
+  // Show install prompt after a short delay if not already installed
+  setTimeout(() => {
+    const prompt = document.getElementById('install-prompt');
+    if (prompt) prompt.classList.add('show');
+  }, 3000);
+});
+
+document.getElementById('btn-install-pwa')?.addEventListener('click', async () => {
+  if (!_deferredInstallPrompt) return;
+  _deferredInstallPrompt.prompt();
+  const { outcome } = await _deferredInstallPrompt.userChoice;
+  _deferredInstallPrompt = null;
+  document.getElementById('install-prompt').classList.remove('show');
+  if (outcome === 'accepted') showToast('Đã cài app thành công! 🎉');
+});
+
+// Hide prompt if already installed
+window.addEventListener('appinstalled', () => {
+  const prompt = document.getElementById('install-prompt');
+  if (prompt) prompt.classList.remove('show');
+});
+
+// Offline / Online detection
+function updateOnlineStatus() {
+  const banner = document.getElementById('offline-banner');
+  if (!banner) return;
+  if (navigator.onLine) {
+    banner.classList.remove('show');
+  } else {
+    banner.classList.add('show');
+  }
+}
+
+window.addEventListener('online', updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
+updateOnlineStatus(); // check on load
 </script>
 </body>
 </html>
