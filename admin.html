@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>POD Manager — Admin</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -173,6 +175,71 @@ tr:hover td { background: var(--bg3); }
 /* Attendance specific */
 .att-filter-bar { display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; }
 .att-stat-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:16px; }
+
+/* ── NOTIFICATION BADGE ── */
+.nav-item-wrap { position:relative; }
+.notif-badge {
+  position:absolute; top:4px; right:4px;
+  background: var(--red); color:#fff;
+  border-radius:10px; min-width:18px; height:18px;
+  font-size:10px; font-weight:700; font-family:'DM Mono',monospace;
+  display:flex; align-items:center; justify-content:center;
+  padding:0 4px; pointer-events:none;
+  animation: badgePop 0.3s cubic-bezier(0.34,1.56,0.64,1);
+}
+.notif-badge.hidden { display:none; }
+@keyframes badgePop { from { transform:scale(0); } to { transform:scale(1); } }
+
+/* Notification drawer */
+.notif-drawer {
+  position:fixed; top:0; right:0; bottom:0; width:340px;
+  background:var(--bg2); border-left:1px solid var(--border);
+  z-index:300; transform:translateX(100%);
+  transition:transform 0.25s cubic-bezier(0.4,0,0.2,1);
+  display:flex; flex-direction:column;
+}
+.notif-drawer.open { transform:translateX(0); }
+.notif-header { padding:20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+.notif-title { font-size:15px; font-weight:600; }
+.notif-close { background:none; border:none; color:var(--text2); cursor:pointer; font-size:20px; line-height:1; padding:4px; }
+.notif-close:hover { color:var(--text); }
+.notif-body { flex:1; overflow-y:auto; padding:12px; }
+.notif-item {
+  display:flex; gap:12px; align-items:flex-start;
+  padding:12px; border-radius:8px; background:var(--bg3);
+  margin-bottom:8px; border:1px solid var(--border);
+}
+.notif-item-icon { font-size:18px; flex-shrink:0; margin-top:1px; }
+.notif-item-text { flex:1; }
+.notif-item-title { font-size:13px; font-weight:500; margin-bottom:3px; }
+.notif-item-sub { font-size:11px; color:var(--text3); font-family:'DM Mono',monospace; }
+.notif-item.checkin .notif-item-icon::after { content:'🟢'; }
+.notif-item.task_done .notif-item-icon::after { content:'✅'; }
+.notif-item.leave_pending .notif-item-icon::after { content:'📋'; }
+.notif-empty { text-align:center; padding:40px 20px; color:var(--text3); }
+.notif-mark-read { padding:12px; border-top:1px solid var(--border); }
+
+/* ── CHART DASHBOARD ── */
+.chart-section { margin-top:24px; }
+.chart-grid { display:grid; grid-template-columns:2fr 1fr; gap:16px; margin-bottom:16px; }
+.chart-grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:16px; }
+.chart-card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:20px; }
+.chart-title { font-size:13px; font-weight:600; margin-bottom:16px; color:var(--text2); text-transform:uppercase; letter-spacing:.06em; }
+.chart-wrap { position:relative; }
+
+/* ── LEAVE PAGE ── */
+.leave-stat-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:16px; }
+.leave-type-tag {
+  display:inline-flex; align-items:center; padding:3px 9px;
+  border-radius:6px; font-size:11px; font-weight:600;
+}
+.leave-phep_nam { background:rgba(91,141,246,.15); color:var(--accent); }
+.leave-benh { background:rgba(240,82,82,.15); color:var(--red); }
+.leave-khong_luong { background:rgba(255,255,255,.08); color:var(--text3); }
+
+/* ── EXPORT BUTTON ── */
+.btn-export { background:rgba(62,207,142,.15); color:var(--green); border:1px solid rgba(62,207,142,.2); }
+.btn-export:hover { background:rgba(62,207,142,.25); }
 </style>
 </head>
 <body>
@@ -216,6 +283,15 @@ tr:hover td { background: var(--bg3); }
     <div class="nav-section-label">Hệ thống</div>
     <button class="nav-item" onclick="showPage('stores')" id="nav-stores"><span class="icon">◈</span> Stores</button>
     <button class="nav-item" onclick="showPage('salary')" id="nav-salary"><span class="icon">◎</span> Tổng quan lương</button>
+    <div class="nav-section-label">Nhân sự</div>
+    <div class="nav-item-wrap">
+      <button class="nav-item" onclick="showPage('leaves')" id="nav-leaves"><span class="icon">🏖</span> Nghỉ phép</button>
+      <span class="notif-badge hidden" id="leave-badge">0</span>
+    </div>
+    <div class="nav-item-wrap">
+      <button class="nav-item" onclick="openNotifDrawer()" id="nav-notif"><span class="icon">🔔</span> Thông báo</button>
+      <span class="notif-badge hidden" id="notif-badge">0</span>
+    </div>
   </nav>
   <div class="sidebar-footer">
     <div class="user-info">
@@ -252,6 +328,23 @@ tr:hover td { background: var(--bg3); }
       <div class="card">
         <div class="section-header"><div class="section-title">Task đang chờ xử lý</div></div>
         <div id="pending-tasks-list"><div class="empty-state"><div class="icon">◧</div><p>Chưa có task</p></div></div>
+      </div>
+    </div>
+    <!-- CHARTS SECTION -->
+    <div class="chart-section">
+      <div class="chart-grid">
+        <div class="chart-card">
+          <div class="chart-title">Giờ làm theo tuần (7 tuần gần nhất)</div>
+          <div class="chart-wrap"><canvas id="chart-weekly-hours" height="200"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Tỉ lệ hoàn thành task</div>
+          <div class="chart-wrap" style="display:flex;align-items:center;justify-content:center"><canvas id="chart-task-pie" height="200" width="200"></canvas></div>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Phân bố ca theo ngày trong tuần</div>
+        <div class="chart-wrap"><canvas id="chart-shift-bar" height="140"></canvas></div>
       </div>
     </div>
   </div>
@@ -304,6 +397,7 @@ tr:hover td { background: var(--bg3); }
 <div class="page" id="page-attendance">
   <div class="topbar">
     <div><div class="topbar-title">Chấm công</div><div class="topbar-sub">Lịch sử chấm công nhân viên — tối đa 3 ca/ngày</div></div>
+    <button class="btn btn-export" onclick="exportAttendance()">⬇ Xuất Excel</button>
   </div>
   <div class="content">
 
@@ -413,6 +507,7 @@ tr:hover td { background: var(--bg3); }
     <div style="display:flex;gap:8px;align-items:center">
       <input type="month" class="salary-month-pick" id="salary-month">
       <button class="btn btn-ghost" onclick="loadSalary()">Tính lương</button>
+      <button class="btn btn-export" onclick="exportSalary()">⬇ Xuất Excel</button>
     </div>
   </div>
   <div class="content">
@@ -429,6 +524,57 @@ tr:hover td { background: var(--bg3); }
 
 </div><!-- /main -->
 </div><!-- /app -->
+
+<!-- LEAVES PAGE (thêm vào bên trong #main) -->
+<script>
+// Inject leaves page vào #main khi DOM load xong
+document.addEventListener('DOMContentLoaded', () => {
+  const leavesPage = document.createElement('div');
+  leavesPage.className = 'page';
+  leavesPage.id = 'page-leaves';
+  leavesPage.innerHTML = `
+  <div class="topbar">
+    <div><div class="topbar-title">Nghỉ phép</div><div class="topbar-sub">Duyệt đơn xin nghỉ của nhân viên</div></div>
+    <button class="btn btn-export" onclick="exportLeaves()">⬇ Xuất Excel</button>
+  </div>
+  <div class="content">
+    <div class="leave-stat-grid">
+      <div class="metric-card amber"><div class="metric-label">Chờ duyệt</div><div class="metric-value" id="leave-stat-pending">—</div><div class="metric-sub">đơn</div></div>
+      <div class="metric-card green"><div class="metric-label">Đã duyệt</div><div class="metric-value" id="leave-stat-approved">—</div><div class="metric-sub">đơn</div></div>
+      <div class="metric-card pink"><div class="metric-label">Từ chối</div><div class="metric-value" id="leave-stat-rejected">—</div><div class="metric-sub">đơn</div></div>
+    </div>
+    <div class="card">
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm leave-filter active" onclick="filterLeaves('all',this)">Tất cả</button>
+        <button class="btn btn-ghost btn-sm leave-filter" onclick="filterLeaves('pending',this)">Chờ duyệt</button>
+        <button class="btn btn-ghost btn-sm leave-filter" onclick="filterLeaves('approved',this)">Đã duyệt</button>
+        <button class="btn btn-ghost btn-sm leave-filter" onclick="filterLeaves('rejected',this)">Từ chối</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nhân viên</th><th>Loại nghỉ</th><th>Từ ngày</th><th>Đến ngày</th><th>Lý do</th><th>Trạng thái</th><th>Ngày gửi</th><th>Thao tác</th></tr></thead>
+          <tbody id="leave-table-body"><tr><td colspan="8" style="text-align:center;padding:32px"><div class="spinner"></div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>`;
+  document.getElementById('main').appendChild(leavesPage);
+});
+</script>
+
+<!-- NOTIFICATION DRAWER -->
+<div class="notif-drawer" id="notif-drawer">
+  <div class="notif-header">
+    <div class="notif-title">🔔 Thông báo</div>
+    <button class="notif-close" onclick="closeNotifDrawer()">✕</button>
+  </div>
+  <div class="notif-body" id="notif-body">
+    <div class="notif-empty">Chưa có thông báo mới</div>
+  </div>
+  <div class="notif-mark-read">
+    <button class="btn btn-ghost" style="width:100%;justify-content:center" onclick="markAllRead()">✓ Đánh dấu đã đọc tất cả</button>
+  </div>
+</div>
 
 <!-- MODALS -->
 <div class="modal-overlay" id="modal-add-user">
@@ -547,6 +693,29 @@ tr:hover td { background: var(--bg3); }
 <script>
 const API_URL = 'https://script.google.com/macros/s/AKfycbzr5ZZb6DFs-k2xYfB9k48XXf15qIhyfKmepBxg4LQ4Wly6mQ-KXmtDl7-O171fIkfH/exec';
 
+// ── CACHE (TTL-based, tự động xóa khi write) ──
+const _cache = new Map();
+function cacheGet(key) {
+  const entry = _cache.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expiry) { _cache.delete(key); return null; }
+  return entry.data;
+}
+function cacheSet(key, data, ttlMs = 60000) {
+  _cache.set(key, { data, expiry: Date.now() + ttlMs });
+}
+function cacheClear(prefix) {
+  _cache.forEach((_, k) => { if (k.startsWith(prefix)) _cache.delete(k); });
+}
+
+// ── DEBOUNCE (chống double-submit) ──
+const _submitting = new Set();
+function guardSubmit(key, fn) {
+  if (_submitting.has(key)) return;
+  _submitting.add(key);
+  Promise.resolve(fn()).finally(() => _submitting.delete(key));
+}
+
 let token = localStorage.getItem('pod_token');
 let currentUser = JSON.parse(localStorage.getItem('pod_user') || 'null');
 let allEmployees = [];
@@ -582,12 +751,19 @@ function getWeekStr(d) {
   return d.getFullYear() + '-W' + String(week).padStart(2, '0');
 }
 
-async function api(params) {
+async function api(params, ttlMs = 0) {
+  const cacheKey = JSON.stringify(params);
+  if (ttlMs > 0) {
+    const cached = cacheGet(cacheKey);
+    if (cached) return cached;
+  }
   const url = new URL(API_URL);
   Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
   if (token) url.searchParams.set('token', token);
   const res = await fetch(url.toString(), { redirect: 'follow' });
-  return res.json();
+  const data = await res.json();
+  if (ttlMs > 0 && data.success) cacheSet(cacheKey, data, ttlMs);
+  return data;
 }
 
 async function apiPost(params) {
@@ -635,20 +811,36 @@ function showApp() {
     document.getElementById('sidebar-username').textContent = currentUser.name || currentUser.username;
     document.getElementById('user-avatar-init').textContent = (currentUser.name || 'A')[0].toUpperCase();
   }
-  loadDashboard();
-  loadTasks();
-  loadEmployees().then(() => { loadStores(); populateAttUserFilter(); });
+  // Load song song: Dashboard + Employees + Tasks cùng lúc
+  Promise.all([
+    loadDashboard(),
+    loadEmployees(),
+    loadTasks(),
+  ]).then(() => {
+    loadStores();
+    populateAttUserFilter();
+    // Load charts sau khi dashboard xong
+    setTimeout(loadDashboardCharts, 500);
+  }).catch(() => {});
+  // Start notification polling
+  startNotifPolling();
 }
 
 function showPage(page) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('page-' + page).classList.add('active');
-  document.getElementById('nav-' + page).classList.add('active');
+  const pageEl = document.getElementById('page-' + page);
+  if (pageEl) pageEl.classList.add('active');
+  const navEl = document.getElementById('nav-' + page);
+  if (navEl) navEl.classList.add('active');
+  // Lazy load
   if (page === 'attendance') loadAttendance();
-  if (page === 'shifts') loadShifts();
-  if (page === 'salary') loadSalary();
-  if (page === 'stores') loadStores();
+  if (page === 'shifts')     loadShifts();
+  if (page === 'salary')     loadSalary();
+  if (page === 'leaves')     loadLeaves();
+  if (page === 'stores' && !cacheGet('{"action":"getStores"}')) loadStores();
+  if (page === 'employees' && !cacheGet('{"action":"getUsers"}')) loadEmployees();
+  if (page === 'dashboard') setTimeout(loadDashboardCharts, 200);
 }
 
 function openModal(id) { document.getElementById(id).classList.add('open'); }
@@ -699,7 +891,7 @@ function avatarInitial(name) { return (name || '?')[0].toUpperCase(); }
 // ── DASHBOARD ──
 async function loadDashboard() {
   try {
-    const res = await api({ action: 'getDashboard' });
+    const res = await api({ action: 'getDashboard' }, 30000);
     if (!res.success) return;
     const d = res.data;
     document.getElementById('m-employees').textContent = d.totalEmployees ?? '—';
@@ -709,9 +901,9 @@ async function loadDashboard() {
     document.getElementById('m-inprogress').textContent = (d.inProgressTasks ?? '—') + ' đang xử lý';
     document.getElementById('m-done').textContent = d.doneTasks ?? '—';
 
+    // Check-in list
     const attList = document.getElementById('today-att-list');
     if (d.recentAttendance && d.recentAttendance.length > 0) {
-      // Dedupe: chỉ hiện mỗi nhân viên 1 lần (lần check-in đầu tiên)
       const seen = new Set();
       const unique = d.recentAttendance.filter(r => { if (seen.has(r.userId)) return false; seen.add(r.userId); return true; });
       attList.innerHTML = unique.map(r => `
@@ -724,27 +916,28 @@ async function loadDashboard() {
     } else {
       attList.innerHTML = '<div class="empty-state"><div class="icon">◷</div><p>Chưa có ai check-in hôm nay</p></div>';
     }
-  } catch(e) { console.error(e); }
 
-  try {
-    const res2 = await api({ action: 'getTasks' });
-    if (res2.success) {
-      const today = new Date().toISOString().split('T')[0];
-      const pending = res2.data.filter(t => { const d = (t.createdAt||'').slice(0,10); return t.status==='pending' && d===today; }).slice(0,5);
-      const el = document.getElementById('pending-tasks-list');
-      if (!pending.length) { el.innerHTML = '<div class="empty-state"><div class="icon">◧</div><p>Không có task hôm nay đang chờ</p></div>'; return; }
+    // Pending tasks — dùng dữ liệu đã có trong dashboard, không call API thêm
+    const pending = d.pendingTasksList || [];
+    const el = document.getElementById('pending-tasks-list');
+    if (!pending.length) {
+      el.innerHTML = '<div class="empty-state"><div class="icon">◧</div><p>Không có task hôm nay đang chờ</p></div>';
+    } else {
       el.innerHTML = `<table style="width:100%">` + pending.map(t => {
         const emp = allEmployees.find(e => e.id === t.assignedTo);
-        return `<tr><td style="padding:10px 0;border-bottom:1px solid var(--border)"><div style="font-size:13.5px;font-weight:500">${t.title}</div><div style="font-size:12px;color:var(--text3);margin-top:2px">${emp ? emp.name : t.assignedTo}</div></td><td style="padding:10px 0;border-bottom:1px solid var(--border);text-align:right">${priorityBadge(t.priority)}</td></tr>`;
+        return `<tr><td style="padding:10px 0;border-bottom:1px solid var(--border)">
+          <div style="font-size:13.5px;font-weight:500">${t.title}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:2px">${emp ? emp.name : t.assignedTo}</div>
+        </td><td style="padding:10px 0;border-bottom:1px solid var(--border);text-align:right">${priorityBadge(t.priority)}</td></tr>`;
       }).join('') + `</table>`;
     }
-  } catch(e) {}
+  } catch(e) { console.error(e); }
 }
 
 // ── EMPLOYEES ──
 async function loadEmployees() {
   try {
-    const res = await api({ action: 'getUsers' });
+    const res = await api({ action: 'getUsers' }, 60000);
     if (res.success) {
       allEmployees = res.data.filter(u => u.status !== 'inactive');
       renderEmployees(allEmployees);
@@ -792,14 +985,18 @@ async function createUser() {
   const name=document.getElementById('new-name').value.trim(), username=document.getElementById('new-username').value.trim(), password=document.getElementById('new-password').value, role=document.getElementById('new-role').value, phone=document.getElementById('new-phone').value.trim(), storeId=document.getElementById('new-store').value;
   if (!name||!username||!password) return showToast('Điền đủ thông tin bắt buộc','error');
   const res = await apiPost({ action:'createUser', name, username, password, role, phone, storeId });
-  if (res.success) { showToast('Tạo tài khoản thành công!'); closeModal('modal-add-user'); loadEmployees(); ['new-name','new-username','new-password','new-phone'].forEach(id=>document.getElementById(id).value=''); }
+  if (res.success) {
+    cacheClear('{"action":"getUsers"'); cacheClear('{"action":"getDashboard"');
+    showToast('Tạo tài khoản thành công!'); closeModal('modal-add-user'); loadEmployees();
+    ['new-name','new-username','new-password','new-phone'].forEach(id=>document.getElementById(id).value='');
+  }
   else showToast(res.error||'Lỗi tạo tài khoản','error');
 }
 
 async function deactivateUser(id, name) {
   if (!confirm(`Vô hiệu hóa tài khoản "${name}"?`)) return;
   const res = await apiPost({ action:'deleteUser', userId:id });
-  if (res.success) { showToast('Đã vô hiệu hóa'); loadEmployees(); } else showToast(res.error,'error');
+  if (res.success) { cacheClear('{"action":"getUsers"'); cacheClear('{"action":"getDashboard"'); showToast('Đã vô hiệu hóa'); loadEmployees(); } else showToast(res.error,'error');
 }
 
 async function resetPwd(id, name) {
@@ -812,7 +1009,7 @@ async function resetPwd(id, name) {
 // ── TASKS ──
 async function loadTasks() {
   try {
-    const res = await api({ action:'getTasks' });
+    const res = await api({ action:'getTasks' }, 30000);
     if (res.success) {
       // Admin thấy TẤT CẢ task, không filter theo ngày
       allTasksFull = res.data;
@@ -849,19 +1046,22 @@ async function createTask() {
   const title=document.getElementById('task-title').value.trim(), assignedTo=document.getElementById('task-assign').value, description=document.getElementById('task-desc').value.trim(), storeId=document.getElementById('task-store').value, dueDate=document.getElementById('task-due').value, priority=document.getElementById('task-priority').value;
   if (!title||!assignedTo) return showToast('Điền tiêu đề và chọn nhân viên','error');
   const res = await apiPost({ action:'createTask', title, assignedTo, description, storeId, dueDate, priority });
-  if (res.success) { showToast('Đã giao việc thành công!'); closeModal('modal-add-task'); loadTasks(); ['task-title','task-desc','task-due'].forEach(id=>document.getElementById(id).value=''); }
-  else showToast(res.error||'Lỗi','error');
+  if (res.success) {
+    cacheClear('{"action":"getTasks"'); cacheClear('{"action":"getDashboard"');
+    showToast('Đã giao việc thành công!'); closeModal('modal-add-task'); loadTasks();
+    ['task-title','task-desc','task-due'].forEach(id=>document.getElementById(id).value='');
+  } else showToast(res.error||'Lỗi','error');
 }
 
 async function updateTaskStatus(taskId, status) {
   const res = await apiPost({ action:'updateTask', taskId, status });
-  if (res.success) { showToast('Cập nhật trạng thái'); loadTasks(); } else showToast(res.error,'error');
+  if (res.success) { cacheClear('{"action":"getTasks"'); cacheClear('{"action":"getDashboard"'); showToast('Cập nhật trạng thái'); loadTasks(); } else showToast(res.error,'error');
 }
 
 async function deleteTask(taskId) {
   if (!confirm('Xóa task này?')) return;
   const res = await apiPost({ action:'deleteTask', taskId });
-  if (res.success) { showToast('Đã xóa task'); loadTasks(); } else showToast(res.error,'error');
+  if (res.success) { cacheClear('{"action":"getTasks"'); cacheClear('{"action":"getDashboard"'); showToast('Đã xóa task'); loadTasks(); } else showToast(res.error,'error');
 }
 
 // ── ATTENDANCE (CẢI TIẾN) ──
@@ -979,7 +1179,7 @@ async function approveShift(shiftId, status) {
 // ── STORES ──
 async function loadStores() {
   try {
-    const res = await api({ action:'getStores' });
+    const res = await api({ action:'getStores' }, 60000);
     if (res.success) { allStores = res.data.filter(s=>s.status!=='inactive'); renderStores(allStores); populateStoreDropdowns(); }
   } catch(e) {}
 }
@@ -1006,13 +1206,20 @@ function editStoreNote(storeId, el) {
   const current = el.innerText.trim()==='Thêm ghi chú...'?'':el.innerText.trim();
   const input = document.createElement('input'); input.type='text'; input.className='form-input'; input.value=current; input.style.cssText='font-size:12px;padding:4px 8px;width:100%';
   el.replaceWith(input); input.focus();
-  const save = async () => { await apiPost({ action:'updateStore', storeId, note:input.value.trim() }); loadStores(); showToast('Đã lưu ghi chú'); };
+  let saved = false;
+  const save = async () => {
+    if (saved) return; saved = true;
+    await apiPost({ action:'updateStore', storeId, note:input.value.trim() });
+    cacheClear('{"action":"getStores"');
+    loadStores(); showToast('Đã lưu ghi chú');
+  };
   input.addEventListener('blur', save); input.addEventListener('keydown', e=>{ if(e.key==='Enter') save(); });
 }
 
 async function updateStoreStatus(storeId, storeStatus) {
   const res = await apiPost({ action:'updateStore', storeId, storeStatus });
-  if (res.success) showToast('Đã cập nhật trạng thái'); else showToast(res.error||'Lỗi','error');
+  if (res.success) { cacheClear('{"action":"getStores"'); showToast('Đã cập nhật trạng thái'); }
+  else showToast(res.error||'Lỗi','error');
 }
 
 function populateStoreDropdowns() {
@@ -1029,7 +1236,7 @@ async function createStore() {
   const name=document.getElementById('store-name').value.trim(), platform=document.getElementById('store-platform').value, url=document.getElementById('store-url').value.trim(), note=document.getElementById('store-note').value.trim(), balance=document.getElementById('store-balance').value||'0', listing=document.getElementById('store-listing').value||'0', storeStatus=document.getElementById('store-status-field').value, managedBy=document.getElementById('store-manager').value;
   if (!name) return showToast('Nhập tên store','error');
   const res = await apiPost({ action:'createStore', name, platform, url, note, balance, listing, storeStatus, managedBy });
-  if (res.success) { showToast('Thêm store thành công!'); closeModal('modal-add-store'); loadStores(); }
+  if (res.success) { cacheClear('{"action":"getStores"'); cacheClear('{"action":"getUsers"'); showToast('Thêm store thành công!'); closeModal('modal-add-store'); loadStores(); }
   else showToast(res.error,'error');
 }
 
@@ -1045,7 +1252,12 @@ async function openEditStore(id) {
   document.getElementById('edit-store-note').value=s.note||'';
 
   let employees=allEmployees.filter(u=>u.role==='employee');
-  if(!employees.length) { try { const r=await api({action:'getUsers'}); if(r.success){allEmployees=r.data.filter(u=>u.status!=='inactive');employees=allEmployees.filter(u=>u.role==='employee');}} catch(e){} }
+  if(!employees.length) {
+    try {
+      const r=await api({action:'getUsers'}, 60000);
+      if(r.success){allEmployees=r.data.filter(u=>u.status!=='inactive');employees=allEmployees.filter(u=>u.role==='employee');}
+    } catch(e){}
+  }
   const sel=document.getElementById('edit-store-manager');
   sel.innerHTML='<option value="">— Chưa gán —</option>'+employees.map(u=>`<option value="${u.id}">${u.name}</option>`).join('');
   const mv=String(s.managedBy||'').trim(); sel.value=mv;
@@ -1056,14 +1268,14 @@ async function openEditStore(id) {
 async function saveEditStore() {
   const storeId=document.getElementById('edit-store-id').value, name=document.getElementById('edit-store-name').value.trim(), platform=document.getElementById('edit-store-platform').value, balance=document.getElementById('edit-store-balance').value, listing=document.getElementById('edit-store-listing').value, storeStatus=document.getElementById('edit-store-status').value, managedBy=document.getElementById('edit-store-manager').value, url=document.getElementById('edit-store-url').value.trim(), note=document.getElementById('edit-store-note').value.trim();
   const res=await apiPost({action:'updateStore',storeId,name,platform,balance,listing,storeStatus,managedBy,url,note});
-  if(res.success){showToast('Đã cập nhật store');closeModal('modal-edit-store');loadStores();}
+  if(res.success){cacheClear('{"action":"getStores"');cacheClear('{"action":"getUsers"');showToast('Đã cập nhật store');closeModal('modal-edit-store');loadStores();}
   else showToast(res.error||'Lỗi','error');
 }
 
 async function deactivateStore(id, name) {
   if(!confirm(`Xóa store "${name}"?`)) return;
   const res=await apiPost({action:'deleteStore',storeId:id});
-  if(res.success){showToast('Đã xóa store');loadStores();} else showToast(res.error,'error');
+  if(res.success){cacheClear('{"action":"getStores"');cacheClear('{"action":"getUsers"');showToast('Đã xóa store');loadStores();} else showToast(res.error,'error');
 }
 
 // ── SALARY ──
@@ -1121,7 +1333,378 @@ async function openEditUser(id) {
 async function saveEditUser() {
   const userId=document.getElementById('edit-user-id').value, name=document.getElementById('edit-name').value.trim(), phone=document.getElementById('edit-phone').value.trim(), role=document.getElementById('edit-role').value, status=document.getElementById('edit-status').value;
   const res=await apiPost({action:'updateUser',userId,name,phone,role,status});
-  if(res.success){showToast('Đã cập nhật nhân viên');closeModal('modal-edit-user');loadEmployees();}
+  if(res.success){cacheClear('{"action":"getUsers"');showToast('Đã cập nhật nhân viên');closeModal('modal-edit-user');loadEmployees();}
+  else showToast(res.error||'Lỗi','error');
+}
+
+// ══════════════════════════════════════════════════════
+// 1. NOTIFICATION BADGE + POLLING (30s)
+// ══════════════════════════════════════════════════════
+
+let _notifPollTimer = null;
+let _allNotifications = { checkins: [], tasksDone: [], leavesPending: [] };
+
+function getLastSeen() {
+  return localStorage.getItem('pod_notif_lastSeen') || new Date(Date.now() - 5*60000).toISOString();
+}
+function setLastSeen() {
+  localStorage.setItem('pod_notif_lastSeen', new Date().toISOString());
+}
+
+async function pollNotifications() {
+  if (!token) return;
+  try {
+    const res = await api({ action: 'getNotifications', lastSeen: getLastSeen() });
+    if (!res.success) return;
+    _allNotifications = res.data;
+    const newCount = res.data.checkins.length + res.data.tasksDone.length;
+    const pendingLeaves = res.data.leavesPending.length;
+    const badge = document.getElementById('notif-badge');
+    if (badge) {
+      if (newCount > 0) { badge.textContent = newCount > 99 ? '99+' : newCount; badge.classList.remove('hidden'); }
+      else badge.classList.add('hidden');
+    }
+    const leaveBadge = document.getElementById('leave-badge');
+    if (leaveBadge) {
+      if (pendingLeaves > 0) { leaveBadge.textContent = pendingLeaves; leaveBadge.classList.remove('hidden'); }
+      else leaveBadge.classList.add('hidden');
+    }
+  } catch(e) {}
+}
+
+function startNotifPolling() {
+  pollNotifications();
+  _notifPollTimer = setInterval(pollNotifications, 30000);
+}
+
+function openNotifDrawer() {
+  document.getElementById('notif-drawer').classList.add('open');
+  renderNotifDrawer();
+}
+function closeNotifDrawer() {
+  document.getElementById('notif-drawer').classList.remove('open');
+}
+
+function renderNotifDrawer() {
+  const body = document.getElementById('notif-body');
+  const { checkins, tasksDone, leavesPending } = _allNotifications;
+  const all = [
+    ...checkins.map(n => ({ ...n, _type: 'checkin' })),
+    ...tasksDone.map(n => ({ ...n, _type: 'task_done' })),
+    ...leavesPending.map(n => ({ ...n, _type: 'leave_pending' }))
+  ].sort((a, b) => new Date(b.time||0) - new Date(a.time||0));
+
+  if (!all.length) { body.innerHTML = '<div class="notif-empty">✓ Không có thông báo mới</div>'; return; }
+
+  body.innerHTML = all.map(n => {
+    let icon, title, sub;
+    if (n._type === 'checkin') {
+      icon = '🟢'; title = `${n.userName} đã check-in`; sub = fmtTime(n.time) + (n.date ? ' — ' + n.date : '');
+    } else if (n._type === 'task_done') {
+      icon = '✅'; title = 'Task hoàn thành'; sub = n.title || '';
+    } else {
+      icon = '📋'; title = `${n.userName} xin nghỉ ${leaveTypeLabel(n.leaveType)}`;
+      sub = `Từ ${fmtDate(n.startDate)}`;
+    }
+    return `<div class="notif-item">
+      <div class="notif-item-icon">${icon}</div>
+      <div class="notif-item-text">
+        <div class="notif-item-title">${title}</div>
+        <div class="notif-item-sub">${sub}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function markAllRead() {
+  setLastSeen();
+  _allNotifications = { checkins: [], tasksDone: [], leavesPending: _allNotifications.leavesPending };
+  const badge = document.getElementById('notif-badge');
+  if (badge) badge.classList.add('hidden');
+  renderNotifDrawer();
+  showToast('Đã đánh dấu đã đọc');
+}
+
+document.addEventListener('click', e => {
+  const drawer = document.getElementById('notif-drawer');
+  if (drawer && drawer.classList.contains('open') && !drawer.contains(e.target) && !e.target.closest('#nav-notif')) {
+    closeNotifDrawer();
+  }
+});
+
+// ══════════════════════════════════════════════════════
+// 2. EXPORT EXCEL (SheetJS)
+// ══════════════════════════════════════════════════════
+
+function exportToExcel(data, sheetName, fileName) {
+  if (!window.XLSX) return showToast('SheetJS chưa load', 'error');
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(data);
+  ws['!cols'] = Object.keys(data[0]||{}).map(k => ({ wch: Math.max(k.length, ...data.map(r => String(r[k]||'').length)) }));
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  XLSX.writeFile(wb, fileName);
+}
+
+function exportAttendance() {
+  const rows = [];
+  document.querySelectorAll('#att-table-body tr').forEach(tr => {
+    const cells = tr.querySelectorAll('td');
+    if (cells.length < 8) return;
+    rows.push({
+      'Nhân viên': cells[0]?.innerText?.trim()||'',
+      'Ngày': cells[1]?.innerText?.trim()||'',
+      'Ca': cells[2]?.innerText?.trim()||'',
+      'Check-in': cells[3]?.innerText?.trim()||'',
+      'Check-out': cells[4]?.innerText?.trim()||'',
+      'Giờ làm': cells[5]?.innerText?.trim()||'',
+      'Trạng thái': cells[6]?.innerText?.trim()||'',
+      'Mô tả': cells[7]?.innerText?.trim()||'',
+    });
+  });
+  if (!rows.length) return showToast('Không có dữ liệu để xuất', 'error');
+  const month = document.getElementById('att-month-pick').value || new Date().toISOString().slice(0,7);
+  exportToExcel(rows, 'Chấm công', `chamcong_${month}.xlsx`);
+  showToast('Xuất Excel thành công!');
+}
+
+function exportSalary() {
+  const rows = [];
+  document.querySelectorAll('#salary-table-body tr').forEach(tr => {
+    const cells = tr.querySelectorAll('td');
+    if (cells.length < 4) return;
+    const inp = cells[2]?.querySelector('input');
+    rows.push({
+      'Nhân viên': cells[0]?.innerText?.trim()||'',
+      'Tổng giờ': cells[1]?.innerText?.trim()||'',
+      'Hệ số (VND/h)': inp ? inp.value : '',
+      'Thành tiền': cells[3]?.innerText?.trim()||'',
+    });
+  });
+  if (!rows.length) return showToast('Tính lương trước khi xuất', 'error');
+  const month = document.getElementById('salary-month').value || new Date().toISOString().slice(0,7);
+  exportToExcel(rows, 'Lương', `luong_${month}.xlsx`);
+  showToast('Xuất Excel thành công!');
+}
+
+function exportLeaves() {
+  if (!allLeavesFull.length) return showToast('Không có dữ liệu', 'error');
+  const rows = allLeavesFull.map(l => ({
+    'Nhân viên': l.userName||'',
+    'Loại nghỉ': leaveTypeLabel(l.leaveType),
+    'Từ ngày': l.startDate||'',
+    'Đến ngày': l.endDate||'',
+    'Lý do': l.reason||'',
+    'Trạng thái': { pending:'Chờ duyệt', approved:'Đã duyệt', rejected:'Từ chối' }[l.status]||l.status,
+    'Ngày gửi': (l.createdAt||'').slice(0,10),
+  }));
+  exportToExcel(rows, 'Nghỉ phép', `nghiphep_${new Date().toISOString().slice(0,7)}.xlsx`);
+  showToast('Xuất Excel thành công!');
+}
+
+// ══════════════════════════════════════════════════════
+// 3. DASHBOARD CHARTS (Chart.js)
+// ══════════════════════════════════════════════════════
+
+let _charts = {};
+function destroyChart(id) { if (_charts[id]) { _charts[id].destroy(); delete _charts[id]; } }
+
+function applyChartDefaults() {
+  if (!window.Chart) return;
+  Chart.defaults.color = '#8b90a0';
+  Chart.defaults.borderColor = 'rgba(255,255,255,0.07)';
+  Chart.defaults.font.family = "'Sora', sans-serif";
+  Chart.defaults.font.size = 12;
+}
+
+async function loadDashboardCharts() {
+  applyChartDefaults();
+  const d = new Date();
+  const sixWeeksAgo = new Date(d - 42*864e5).toISOString().split('T')[0];
+  const endDate = d.toISOString().split('T')[0];
+  try {
+    const [attRes, taskRes, shiftRes] = await Promise.all([
+      api({ action:'getAttendance', startDate:sixWeeksAgo, endDate }, 120000),
+      api({ action:'getTasks' }, 60000),
+      api({ action:'getShifts' }, 60000),
+    ]);
+    if (attRes.success) renderWeeklyHoursChart(attRes.data);
+    if (taskRes.success) renderTaskPieChart(taskRes.data);
+    if (shiftRes.success) renderShiftBarChart(shiftRes.data);
+  } catch(e) { console.error('Chart error:', e); }
+}
+
+function renderWeeklyHoursChart(records) {
+  if (!window.Chart) return;
+  destroyChart('weekly');
+  const weekMap = {};
+  records.forEach(r => {
+    if (!r.checkIn || !r.checkOut) return;
+    const diff = (new Date(r.checkOut) - new Date(r.checkIn)) / 36e5;
+    if (diff <= 0) return;
+    const wk = getWeekStr(new Date(r.date || r.checkIn));
+    weekMap[wk] = (weekMap[wk]||0) + diff;
+  });
+  const sorted = Object.entries(weekMap).sort((a,b) => a[0].localeCompare(b[0])).slice(-7);
+  const ctx = document.getElementById('chart-weekly-hours');
+  if (!ctx) return;
+  _charts['weekly'] = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: sorted.map(([w]) => w.replace(/\d{4}-/, '')),
+      datasets: [{
+        label: 'Tổng giờ làm',
+        data: sorted.map(([,h]) => Math.round(h*10)/10),
+        borderColor: '#5b8df6', backgroundColor: 'rgba(91,141,246,0.12)',
+        pointBackgroundColor: '#5b8df6', fill: true, tension: 0.35, pointRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.07)' } },
+        y: { grid: { color: 'rgba(255,255,255,0.07)' }, beginAtZero: true, ticks: { callback: v => v+'h' } }
+      }
+    }
+  });
+}
+
+function renderTaskPieChart(tasks) {
+  if (!window.Chart) return;
+  destroyChart('pie');
+  const ctx = document.getElementById('chart-task-pie');
+  if (!ctx) return;
+  _charts['pie'] = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Chờ xử lý','Đang làm','Hoàn thành'],
+      datasets: [{
+        data: [
+          tasks.filter(t=>t.status==='pending').length,
+          tasks.filter(t=>t.status==='in_progress').length,
+          tasks.filter(t=>t.status==='done').length,
+        ],
+        backgroundColor: ['#f5a623','#5b8df6','#3ecf8e'],
+        borderWidth: 0, hoverOffset: 6,
+      }]
+    },
+    options: {
+      responsive: true, cutout: '68%',
+      plugins: { legend: { position: 'bottom', labels: { padding: 12, boxWidth: 12 } } }
+    }
+  });
+}
+
+function renderShiftBarChart(shifts) {
+  if (!window.Chart) return;
+  destroyChart('shiftbar');
+  const ctx = document.getElementById('chart-shift-bar');
+  if (!ctx) return;
+  const dayKeys = ['mon','tue','wed','thu','fri','sat','sun'];
+  _charts['shiftbar'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['T2','T3','T4','T5','T6','T7','CN'],
+      datasets: [
+        { label:'Sáng', data: dayKeys.map(dk => shifts.filter(s=>(s[dk]||'').includes('sang')).length), backgroundColor:'rgba(245,166,35,0.6)', borderColor:'#f5a623', borderWidth:1, borderRadius:3 },
+        { label:'Chiều', data: dayKeys.map(dk => shifts.filter(s=>(s[dk]||'').includes('chieu')).length), backgroundColor:'rgba(91,141,246,0.6)', borderColor:'#5b8df6', borderWidth:1, borderRadius:3 },
+        { label:'Tối', data: dayKeys.map(dk => shifts.filter(s=>(s[dk]||'').includes('toi')).length), backgroundColor:'rgba(232,121,160,0.6)', borderColor:'#e879a0', borderWidth:1, borderRadius:3 },
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'top', labels: { padding: 14, boxWidth: 12 } } },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.07)' } },
+        y: { grid: { color: 'rgba(255,255,255,0.07)' }, beginAtZero: true, ticks: { stepSize: 1 } }
+      }
+    }
+  });
+}
+
+// ══════════════════════════════════════════════════════
+// 4. LEAVE MANAGEMENT
+// ══════════════════════════════════════════════════════
+
+let allLeavesFull = [];
+let currentLeaveFilter = 'all';
+
+function leaveTypeLabel(t) {
+  return { phep_nam:'Phép năm', benh:'Nghỉ bệnh', khong_luong:'Không lương' }[t] || (t||'');
+}
+
+async function loadLeaves() {
+  const tb = document.getElementById('leave-table-body');
+  if (!tb) return;
+  tb.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px"><div class="spinner"></div></td></tr>';
+  try {
+    const res = await api({ action:'getLeaves' });
+    if (!res.success) return;
+    allLeavesFull = res.data;
+    const ps = document.getElementById('leave-stat-pending');
+    const as2 = document.getElementById('leave-stat-approved');
+    const rs = document.getElementById('leave-stat-rejected');
+    if (ps) ps.textContent = allLeavesFull.filter(l=>l.status==='pending').length;
+    if (as2) as2.textContent = allLeavesFull.filter(l=>l.status==='approved').length;
+    if (rs) rs.textContent = allLeavesFull.filter(l=>l.status==='rejected').length;
+    filterLeaves(currentLeaveFilter);
+    // sync leave badge
+    const leaveBadge = document.getElementById('leave-badge');
+    const pending = allLeavesFull.filter(l=>l.status==='pending').length;
+    if (leaveBadge) {
+      if (pending > 0) { leaveBadge.textContent = pending; leaveBadge.classList.remove('hidden'); }
+      else leaveBadge.classList.add('hidden');
+    }
+  } catch(e) {
+    tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--red)">Lỗi tải dữ liệu</td></tr>';
+  }
+}
+
+function filterLeaves(status, btn) {
+  currentLeaveFilter = status;
+  document.querySelectorAll('.leave-filter').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderLeaves(status==='all' ? allLeavesFull : allLeavesFull.filter(l=>l.status===status));
+}
+
+function renderLeaves(list) {
+  const tb = document.getElementById('leave-table-body');
+  if (!tb) return;
+  if (!list.length) {
+    tb.innerHTML = '<tr><td colspan="8"><div class="empty-state"><div class="icon">🏖</div><p>Không có đơn nghỉ nào</p></div></td></tr>';
+    return;
+  }
+  const typeColors = { phep_nam:'badge-blue', benh:'badge-red', khong_luong:'badge-gray' };
+  tb.innerHTML = list.map(l => {
+    const actions = l.status === 'pending'
+      ? `<div style="display:flex;gap:6px">
+           <button class="btn btn-success btn-sm" onclick="approveLeave('${l.id}')">✓ Duyệt</button>
+           <button class="btn btn-danger btn-sm" onclick="rejectLeave('${l.id}')">✕ Từ chối</button>
+         </div>`
+      : statusBadge(l.status);
+    return `<tr>
+      <td><div style="display:flex;align-items:center;gap:8px"><div class="att-avatar" style="width:28px;height:28px;font-size:11px">${avatarInitial(l.userName)}</div><span style="font-weight:500">${l.userName||'—'}</span></div></td>
+      <td><span class="badge ${typeColors[l.leaveType]||'badge-gray'}">${leaveTypeLabel(l.leaveType)}</span></td>
+      <td style="font-family:'DM Mono',monospace;font-size:12px">${fmtDate(l.startDate)}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:12px">${fmtDate(l.endDate)}</td>
+      <td style="font-size:12px;color:var(--text3);max-width:160px">${l.reason||'—'}</td>
+      <td>${statusBadge(l.status)}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--text3)">${(l.createdAt||'').slice(0,10)}</td>
+      <td>${actions}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function approveLeave(leaveId) {
+  const res = await apiPost({ action:'approveLeave', leaveId });
+  if (res.success) { showToast('Đã duyệt đơn nghỉ'); cacheClear('{"action":"getLeaves"'); loadLeaves(); pollNotifications(); }
+  else showToast(res.error||'Lỗi','error');
+}
+
+async function rejectLeave(leaveId) {
+  if (!confirm('Từ chối đơn nghỉ này?')) return;
+  const res = await apiPost({ action:'rejectLeave', leaveId });
+  if (res.success) { showToast('Đã từ chối đơn nghỉ'); cacheClear('{"action":"getLeaves"'); loadLeaves(); pollNotifications(); }
   else showToast(res.error||'Lỗi','error');
 }
 </script>
